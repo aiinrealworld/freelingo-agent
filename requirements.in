@@ -1,0 +1,11 @@
+fastapi
+supabase
+pydantic-ai
+logfire
+python-jose
+
+# Testing & dev tools
+pytest-asyncio
+ruff
+black
+isort
