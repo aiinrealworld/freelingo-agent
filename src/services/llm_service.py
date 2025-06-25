@@ -1,9 +1,11 @@
 from typing import List, Tuple
 import json
 from agents.words_agent import words_agent
-from agents.dialogue_agent import dialogue_agent
+from agents.agents_config import DIALOGUE_AGENT_PROMPT
+from agents.dialogue_agent import create_dialogue_agent
 from models.words_model import WordSuggestion
 from pydantic_ai.messages import ModelMessage
+from services.user_session_service import get_session
 
 async def suggest_new_words(known_words: List[str]) -> WordSuggestion:
     """
@@ -29,6 +31,7 @@ async def suggest_new_words(known_words: List[str]) -> WordSuggestion:
 
 
 async def get_dialogue_response(
+    user_id: str,
     known_words: List[str],
     new_words: List[str],
     student_response: str,
@@ -48,16 +51,20 @@ async def get_dialogue_response(
     """
 
     try:
-        user_prompt = {
-            "known_words": known_words,
-            "new_words": new_words,
-            "student_response": student_response
-        }
 
-        
+        session = get_session(user_id=user_id)
+        dialogue_agent = session.dialogue_agent
 
+        if dialogue_agent is None:
+            updated_dialogue_agent_prompt = DIALOGUE_AGENT_PROMPT.format(
+                known_words=json.dumps(known_words, ensure_ascii=False),
+                new_words=json.dumps(new_words, ensure_ascii=False)
+            )
+            dialogue_agent = create_dialogue_agent(updated_dialogue_agent_prompt)
+            session.dialogue_agent = dialogue_agent
+      
         result = await dialogue_agent.run(
-            user_prompt=user_prompt,
+            user_prompt=student_response,
             message_history=dialogue_history
         )
         

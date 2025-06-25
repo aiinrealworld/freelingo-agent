@@ -36,6 +36,7 @@ async def run_dialogue_turn(user_id: str, student_response: str) -> str:
 
     # Get next AI message
     ai_message, new_dialogue_history = await get_dialogue_response(
+        user_id=user_id,
         known_words=known_words,
         new_words=new_words,
         student_response=student_response,

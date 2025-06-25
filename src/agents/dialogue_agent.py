@@ -7,10 +7,11 @@ from agents.agents_config import DIALOGUE_AGENT_PROMPT
 # Configure logging
 logfire.configure(send_to_logfire="if-token-present")
 
-dialogue_agent = Agent(
-    model=DIALOGUE_LLM_MODEL,
-    system_prompt=DIALOGUE_AGENT_PROMPT,
-    temperature=0.3,
-    output_type=str,
-    instrument=True,
-)
+def create_dialogue_agent(system_prompt: str) -> Agent:
+    return Agent(
+        model=DIALOGUE_LLM_MODEL,
+        system_prompt=system_prompt,
+        temperature=0.3,
+        output_type=str,
+        instrument=True,
+    )
