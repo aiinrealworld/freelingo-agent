@@ -71,6 +71,7 @@ async def test_dialogue_turns_with_known_and_new_words_10_turns():
 
         # Get AI message
         ai_message, new_history = await get_dialogue_response(
+            user_id=TEST_USER_ID,
             known_words=session.known_words,
             new_words=session.new_words,
             student_response=student_response,
