@@ -1,15 +1,9 @@
-from typing import List
+from typing import List, Tuple
 import json
 from agents.words_agent import words_agent
+from agents.dialogue_agent import dialogue_agent
 from models.words_model import WordSuggestion
-
-from services.known_words_service import fetch_known_words
-from models.words_model import WordSuggestion
-
-def suggest_new_words_for_user(user_id: str) -> WordSuggestion:
-    known_words = fetch_known_words(user_id)
-    return suggest_new_words(known_words)
-
+from pydantic_ai.messages import ModelMessage
 
 async def suggest_new_words(known_words: List[str]) -> WordSuggestion:
     """
@@ -26,10 +20,48 @@ async def suggest_new_words(known_words: List[str]) -> WordSuggestion:
         result = await words_agent.run(
             user_prompt = f"List of known words: {known_words}"
         )
-        print(f"response {result.output}")
         parsed_output = json.loads(result.output)
 
         return WordSuggestion(**parsed_output)
     
     except Exception as e:
         raise RuntimeError(f"words_agent failed: {e}")
+
+
+async def get_dialogue_response(
+    known_words: List[str],
+    new_words: List[str],
+    student_response: str,
+    dialogue_history: List[ModelMessage],
+) -> Tuple[str, List[ModelMessage]]:
+    
+    """
+    Calls the dialogue_agent to generate the next AI message in French.
+
+    Args:
+        known_words (List[str]): Words the user already knows.
+        new_words (List[str]): 3 new words for this dialogue.
+        conversation_history (List[dict]): List of previous turns. Each dict has 'speaker' and 'message'.
+
+    Returns:
+        str: The next AI message in French.
+    """
+
+    try:
+        user_prompt = {
+            "known_words": known_words,
+            "new_words": new_words,
+            "student_response": student_response
+        }
+
+        
+
+        result = await dialogue_agent.run(
+            user_prompt=user_prompt,
+            message_history=dialogue_history
+        )
+        
+        return result.output, result.all_messages()
+
+    except Exception as e:
+        raise RuntimeError(f"dialogue_agent failed: {e}")

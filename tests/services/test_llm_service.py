@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
 from models.words_model import WordSuggestion
-from services.llm_service import suggest_new_words_for_user
+from services.words_service import suggest_new_words_for_user
 
 @patch("services.llm_service.fetch_known_words")
 @patch("services.llm_service.words_agent")

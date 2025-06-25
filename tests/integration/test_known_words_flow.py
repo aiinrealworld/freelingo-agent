@@ -40,7 +40,7 @@ async def test_known_words_llm_integration():
             "et", "est", "nous", "je", "tu", "vous", "dans", "sur", "avec", "pour",
             "mon", "ton", "son", "ce", "cette", "qui", "que", "se"
         }
-        
+
         unknown_words = [
             token for token in sentence_words
             if token not in allowed_vocab and token not in ALLOWED_FUNCTION_WORDS
@@ -48,5 +48,5 @@ async def test_known_words_llm_integration():
 
         # Warn but don't fail
         if unknown_words:
-            print(f"⚠️ Unexpected words in usage for '{word}': {unknown_words}")
+            print(f"WARN: (Possible) unexpected words in usage : {unknown_words}")
 
