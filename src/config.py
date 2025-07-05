@@ -18,6 +18,8 @@ DIALOGUE_LLM_MODEL = os.getenv("DIALOGUE_LLM_MODEL")
 FEEDBACK_LLM_MODEL = os.getenv("FEEDBACK_LLM_MODEL")
 
 LOGFIRE_TOKEN = os.getenv("OPENAI_API_KEY")
+GOOGLE_CREDS_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
 
 required_vars = [
     "SUPABASE_URL",
@@ -29,6 +31,7 @@ required_vars = [
     "DIALOGUE_LLM_MODEL",
     "FEEDBACK_LLM_MODEL",
     "LOGFIRE_TOKEN",
+    "GOOGLE_CREDS_PATH",
 ]
 
 for var in required_vars:

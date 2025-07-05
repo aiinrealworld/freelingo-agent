@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login with Google</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <h2>Sign in with Google</h2>
+  <button onclick="login()">Login</button>
+
+  <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDSy2Of0z2fL0ezRpuDCeDLW2EZxruQs9g",
+        authDomain: "language-tutor-agent.firebaseapp.com",
+        projectId: "language-tutor-agent",
+        storageBucket: "language-tutor-agent.firebasestorage.app",
+        messagingSenderId: "613493583188",
+        appId: "1:613493583188:web:288f02fe58628ff134ecc1",
+        measurementId: "G-LXKV62F376"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    function login() {
+      firebase.auth().signInWithPopup(provider)
+        .then(result => {
+          return result.user.getIdToken();
+        })
+        .then(token => {
+          const streamlitAppUrl = "http://localhost:8501/auth_callback?token=" + encodeURIComponent(token);
+          window.location.href = streamlitAppUrl;
+        })
+        .catch(error => {
+          alert("Login failed: " + error.message);
+          console.error(error);
+        });
+    }
+  </script>
+</body>
+</html>
