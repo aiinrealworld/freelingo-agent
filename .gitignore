@@ -193,4 +193,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-firebase_client_config.json
+firebase-service-account.json

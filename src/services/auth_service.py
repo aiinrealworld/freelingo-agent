@@ -9,9 +9,9 @@ bearer_scheme = HTTPBearer()
 
 # Initialize Firebase only once
 if not firebase_admin._apps:
-    creds_path = os.getenv("GOOGLE_CREDS_PATH")
+    creds_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
     if not creds_path:
-        raise RuntimeError("GOOGLE_CREDS_PATH environment variable is not set.")
+        raise RuntimeError("FIREBASE_SERVICE_ACCOUNT_PATH environment variable is not set.")
     cred = credentials.Certificate(creds_path)
     firebase_admin.initialize_app(cred)
 
