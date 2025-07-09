@@ -26,14 +26,17 @@ Format your response exactly like this:
   "new_words": ["mot1", "mot2", "mot3"],
   "usages": {
     "mot1": {
+      "translation": "word1",
       "fr": "Phrase exemple pour mot1.",
       "en": "English translation for mot1 sentence."
     },
     "mot2": {
+      "translation": "word2",
       "fr": "Phrase exemple pour mot2.",
       "en": "English translation for mot2 sentence."
     },
     "mot3": {
+      "translation": "word3",
       "fr": "Phrase exemple pour mot3.",
       "en": "English translation for mot3 sentence."
     }

@@ -5,6 +5,7 @@ from services.user_session_service import (
 )
 from services.words_service import fetch_known_words
 from services.llm_service import get_dialogue_response
+from db.progress import increment_dialogue_sessions
 
 
 async def run_dialogue_turn(user_id: str, student_response: str) -> str:
@@ -29,6 +30,10 @@ async def run_dialogue_turn(user_id: str, student_response: str) -> str:
 
     # Fetch history
     dialogue_history = get_dialogue_history_from_session(user_id)
+
+    # Track dialogue session if this is the first turn
+    if len(dialogue_history) == 0:
+        increment_dialogue_sessions(user_id)
 
     # Stop if dialogue is already complete
     # if len(conversation_history) >= 10:

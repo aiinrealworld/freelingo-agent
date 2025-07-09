@@ -1,5 +1,5 @@
 import pytest
-from db.known_words import get_known_words
+from db.words import get_known_words
 from services.llm_service import suggest_new_words
 from models.words_model import WordSuggestion
 import re

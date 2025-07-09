@@ -3,6 +3,10 @@ supabase
 pydantic-ai
 logfire
 python-jose
+google-cloud-speech
+streamlit
+streamlit-audiorec
+firebase_admin
 
 # Testing & dev tools
 pytest-asyncio
