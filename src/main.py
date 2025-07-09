@@ -1,12 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from api.known_words import router as known_words_router
+
 from api.auth import router as auth_router
 from api.voice import router as voice_router
 from api.words import router as words_router
 from api.progress import router as progress_router
 
 app = FastAPI(title="FreeLingo API", version="1.0.0")
+
+
 
 # CORS for React frontend
 app.add_middleware(
@@ -21,7 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
-app.include_router(known_words_router)
+
 app.include_router(voice_router)
 app.include_router(words_router, prefix="/api")
 app.include_router(progress_router, prefix="/api")
@@ -43,4 +45,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

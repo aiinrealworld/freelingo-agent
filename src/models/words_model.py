@@ -3,8 +3,9 @@ from typing import List, Dict, Optional
 from datetime import datetime
 
 class UsageExample(BaseModel):
+    translation: str  # English translation of the word
     fr: str  # French sentence
-    en: str  # English translation
+    en: str  # English translation of the sentence
 
 class WordSuggestion(BaseModel):
     new_words: List[str]
@@ -15,11 +16,11 @@ class WordCreate(BaseModel):
     word: str
     translation: str
     example: Optional[str] = None
+    user_id: str
 
 class WordResponse(WordCreate):
     id: str
     user_id: str
-    learned: bool = False
     created_at: datetime
 
 class WordUpdate(BaseModel):

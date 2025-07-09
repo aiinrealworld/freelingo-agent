@@ -23,7 +23,8 @@ async def suggest_new_words(known_words: List[str]) -> WordSuggestion:
             user_prompt = f"List of known words: {known_words}"
         )
         parsed_output = json.loads(result.output)
-
+        print(parsed_output)
+        
         return WordSuggestion(**parsed_output)
     
     except Exception as e:

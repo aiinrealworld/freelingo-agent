@@ -6,10 +6,10 @@ from datetime import datetime
 
 def get_user_progress(user_id: str) -> UserProgress:
     """Get user learning progress"""
-    # Get words count
-    words_response = supabase.table("known_words").select("*").eq("user_id", user_id).execute()
+    # Get words count - all words in words table are considered learned
+    words_response = supabase.table("words").select("*").eq("user_id", user_id).execute()
     total_words = len(words_response.data)
-    learned_words = len([w for w in words_response.data if w.get("learned", False)])
+    learned_words = total_words  # All words in words table are learned
     
     # Get progress data
     progress_response = supabase.table("user_progress").select("*").eq("user_id", user_id).execute()

@@ -4,21 +4,19 @@
 -- =========================
 
 -- =========================
--- 📘 Table: known_words (Updated for React UI + Firebase)
+-- 📘 Table: words (Updated for React UI + Firebase)
 -- =========================
-create table public.known_words (
+create table public.words (
   id uuid primary key default gen_random_uuid(),
   user_id text not null,  -- Firebase UID (not UUID)
   word text not null,
   translation text not null,
   example text,
-  learned boolean default false,
   created_at timestamp with time zone default now()
 );
 
 -- No Row Level Security - backend handles user isolation
-create index on public.known_words(user_id);
-create index on public.known_words(user_id, learned);
+create index on public.words(user_id);
 
 -- =========================
 -- 📊 Table: user_progress
