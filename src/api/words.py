@@ -88,35 +88,6 @@ async def delete_word_endpoint(word_id: str, current_user: User = Depends(get_cu
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete word: {str(e)}")
 
-@router.post("/dialogue", response_model=DialogueResponse)
-async def chat_with_ai(message: DialogueMessage, current_user: User = Depends(get_current_user_firebase)):
-    """Send message to AI tutor"""
-    # Verify the user is sending messages for themselves
-    if current_user.user_id != message.user_id:
-        raise HTTPException(status_code=403, detail="Can only send messages for yourself")
-    
-    try:
-        # Get AI response using existing dialogue service
-        ai_response = await run_dialogue_turn(
-            user_id=message.user_id,
-            student_response=message.message
-        )
-        
-        # Get suggested words for this user
-        try:
-            word_suggestion = suggest_new_words_for_user(message.user_id)
-            suggested_words = word_suggestion.new_words
-        except Exception:
-            # Fallback if word suggestion fails
-            suggested_words = []
-        
-        return DialogueResponse(
-            response=ai_response,
-            suggested_words=suggested_words
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process message: {str(e)}") 
-
 @router.get("/new-words/{user_id}", response_model=List[WordResponse])
 async def get_new_words_endpoint(user_id: str, current_user: User = Depends(get_current_user_firebase)):
     """Get all new words for a user using suggest_new_words_for_user"""
