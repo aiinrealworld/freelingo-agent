@@ -5,7 +5,6 @@ from services.user_session_service import (
 )
 from services.words_service import fetch_known_words
 from services.llm_service import get_dialogue_response
-from db.progress import increment_dialogue_sessions
 
 
 async def run_dialogue_turn(user_id: str, student_response: str) -> str:
