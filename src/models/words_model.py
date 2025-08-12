@@ -35,9 +35,3 @@ class DialogueMessage(BaseModel):
 class DialogueResponse(BaseModel):
     response: str
     suggested_words: List[str] = []
-
-class UserProgress(BaseModel):
-    total_words: int
-    learned_words: int
-    dialogue_sessions: int
-    streak_days: int

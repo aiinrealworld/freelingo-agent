@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.auth import router as auth_router
 from api.voice import router as voice_router
 from api.words import router as words_router
-from api.progress import router as progress_router
+from api.dialogue import router as dialogue_router
 
 app = FastAPI(title="FreeLingo API", version="1.0.0")
 
@@ -26,7 +26,7 @@ app.include_router(auth_router)
 
 app.include_router(voice_router)
 app.include_router(words_router, prefix="/api")
-app.include_router(progress_router, prefix="/api")
+app.include_router(dialogue_router, prefix="/api")
 
 # Health check endpoint
 @app.get("/api/health")
