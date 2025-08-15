@@ -5,16 +5,18 @@ from services.user_session_service import (
 )
 from services.words_service import fetch_known_words
 from services.llm_service import get_dialogue_response
+from pydantic_ai.messages import ModelMessage
+from typing import List, Dict, Any, Tuple
 
-
-async def run_dialogue_turn(user_id: str, student_response: str) -> str:
+async def run_dialogue_turn(user_id: str, student_response: str) -> Tuple[str, Dict[str, Any]]:
     """
     Handles a single dialogue turn for the user.
     Fetches known words and dialogue history from session,
     calls LLM for the next AI message, and updates session.
 
     Returns:
-        str: The AI's next French message.
+        str: The AI's next French message (clean text for UI).
+        Dict: Full agent response (for storage and feedback agent).
     """
 
     session = get_session(user_id)
@@ -28,12 +30,8 @@ async def run_dialogue_turn(user_id: str, student_response: str) -> str:
     # Fetch history
     dialogue_history = get_dialogue_history_from_session(user_id)
 
-    # Stop if dialogue is already complete
-    # if len(conversation_history) >= 10:
-    #    raise ValueError("Dialogue already complete (10 turns).")
-
     # Get next AI message
-    ai_message, new_dialogue_history = await get_dialogue_response(
+    ai_message, new_dialogue_history, full_response = await get_dialogue_response(
         user_id=user_id,
         known_words=known_words,
         student_response=student_response,
@@ -43,4 +41,13 @@ async def run_dialogue_turn(user_id: str, student_response: str) -> str:
     # Append message to history
     update_dialogue_turn_in_session(user_id, new_dialogue_history)
 
-    return ai_message
+    return ai_message, full_response
+
+def extract_full_agent_response(result_output) -> Dict[str, Any]:
+    """Extract the full agent response including rationale, rule_checks, etc."""
+    if hasattr(result_output, '__dict__'):
+        return result_output.__dict__
+    elif hasattr(result_output, 'dict'):
+        return result_output.dict()
+    else:
+        return {"raw_response": str(result_output)}

@@ -19,7 +19,8 @@ class DialogueResponse(BaseModel):
 @router.post("/dialogue", response_model=DialogueResponse)
 async def dialogue_endpoint(payload: DialogueRequest):
     print(f"Received from user {payload.user_id}: {payload.message}")
-    ai_response = await run_dialogue_turn(user_id=payload.user_id, student_response=payload.message)
+    ai_response, full_response = await run_dialogue_turn(user_id=payload.user_id, student_response=payload.message)
+    # UI only gets the clean text, full_response is available for storage if needed
     return DialogueResponse(response=ai_response)
 
 @router.post("/dialogue-session", response_model=DialogueSessionResponse, status_code=201)
