@@ -28,6 +28,19 @@ def update_dialogue_turn_in_session(user_id: str, dialogue_history: List[ModelMe
     session.updated_at = datetime.now(timezone.utc)
 
 
+def store_agent_response_in_session(user_id: str, agent_response: Dict) -> None:
+    """Store the full agent response for the most recent AI message"""
+    session = get_session(user_id)
+    session.last_agent_response = agent_response
+    session.updated_at = datetime.now(timezone.utc)
+
+
+def get_agent_response_from_session(user_id: str) -> Dict:
+    """Get the full agent response for the most recent AI message"""
+    session = get_session(user_id)
+    return getattr(session, 'last_agent_response', None)
+
+
 def get_dialogue_history_from_session(user_id: str) -> List[ModelMessage]:
     return get_session(user_id).dialogue_history
 

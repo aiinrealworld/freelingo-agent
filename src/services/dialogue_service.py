@@ -2,6 +2,7 @@ from services.user_session_service import (
     get_session,
     get_dialogue_history_from_session,
     update_dialogue_turn_in_session,
+    store_agent_response_in_session,
 )
 from services.words_service import fetch_known_words
 from services.llm_service import get_dialogue_response
@@ -37,6 +38,9 @@ async def run_dialogue_turn(user_id: str, student_response: str) -> Tuple[str, D
         student_response=student_response,
         dialogue_history=dialogue_history,
     )
+
+    # Store the full agent response in session
+    store_agent_response_in_session(user_id, full_response)
 
     # Append message to history
     update_dialogue_turn_in_session(user_id, new_dialogue_history)
