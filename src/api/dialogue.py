@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
 from pydantic import BaseModel
 from services.dialogue_service import run_dialogue_turn
-from services.dialogue_session_service import save_dialogue_session_service, list_dialogue_sessions_service, get_dialogue_session_service
+from services.dialogue_session_service import save_dialogue_session_service, list_dialogue_sessions_service, get_dialogue_session_service, get_conversation_with_agent_responses
 from models.dialogue_session import DialogueSessionRequest, DialogueSessionResponse
 from models.user import User
 from utils.firebase_auth import get_current_user_firebase
 from typing import Any
+from datetime import datetime
 
 router = APIRouter()
 
@@ -19,7 +20,8 @@ class DialogueResponse(BaseModel):
 @router.post("/dialogue", response_model=DialogueResponse)
 async def dialogue_endpoint(payload: DialogueRequest):
     print(f"Received from user {payload.user_id}: {payload.message}")
-    ai_response = await run_dialogue_turn(user_id=payload.user_id, student_response=payload.message)
+    ai_response, full_response = await run_dialogue_turn(user_id=payload.user_id, student_response=payload.message)
+    # UI only gets the clean text, full_response is available for storage if needed
     return DialogueResponse(response=ai_response)
 
 @router.post("/dialogue-session", response_model=DialogueSessionResponse, status_code=201)
@@ -40,6 +42,34 @@ async def save_dialogue_session(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return DialogueSessionResponse(session_id=session_id, status="saved")
+
+@router.post("/dialogue-session/current/{user_id}", response_model=DialogueSessionResponse, status_code=201)
+async def save_current_dialogue_session(
+    user_id: str,
+    current_user: User = Depends(get_current_user_firebase)
+):
+    """Save the current dialogue session with full agent responses"""
+    # Auth check
+    if current_user.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Can only save sessions for yourself")
+    
+    try:
+        # Get conversation with full agent responses from session
+        messages = get_conversation_with_agent_responses(user_id)
+        
+        if not messages:
+            raise HTTPException(status_code=400, detail="No conversation to save")
+        
+        session_id = save_dialogue_session_service(
+            user_id=user_id,
+            messages=messages,
+            started_at=None,  # Could be enhanced to track session start time
+            ended_at=datetime.utcnow().isoformat() + 'Z'
+        )
+        
+        return DialogueSessionResponse(session_id=session_id, status="saved")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/dialogue-sessions/{user_id}")
 async def list_dialogue_sessions(user_id: str, current_user: User = Depends(get_current_user_firebase)):

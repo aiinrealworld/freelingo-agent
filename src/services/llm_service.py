@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 import json
 from agents.words_agent import words_agent
 from agents.agents_config import DIALOGUE_AGENT_PROMPT
@@ -36,21 +36,21 @@ async def get_dialogue_response(
     known_words: List[str],
     student_response: str,
     dialogue_history: List[ModelMessage],
-) -> Tuple[str, List[ModelMessage]]:
-    
+) -> Tuple[str, List[ModelMessage], Dict[str, Any]]:
     """
     Calls the dialogue_agent to generate the next AI message in French.
 
     Args:
         known_words (List[str]): Words the user already knows.
-        conversation_history (List[dict]): List of previous turns. Each dict has 'speaker' and 'message'.
+        dialogue_history (List[ModelMessage]): List of previous ModelMessage objects.
 
     Returns:
-        str: The next AI message in French.
+        str: The next AI message in French (clean text for UI).
+        List[ModelMessage]: Updated dialogue history with new turn.
+        Dict: Full agent response (for storage and feedback agent).
     """
 
     try:
-
         session = get_session(user_id=user_id)
         dialogue_agent = session.dialogue_agent
 
@@ -63,20 +63,12 @@ async def get_dialogue_response(
             dialogue_agent = create_dialogue_agent(updated_dialogue_agent_prompt)
             session.dialogue_agent = dialogue_agent
         else:
-            # If agent already exists, print its system prompt
             print("[DEBUG] Dialogue Agent System Prompt (existing agent):")
             print(dialogue_agent.system_prompt)
+        
         print("[DEBUG] Message History:")
         for i, msg in enumerate(dialogue_history):
-            if hasattr(msg, 'parts'):
-                if isinstance(msg, ModelResponse):
-                    for part in msg.parts:
-                        if isinstance(part, TextPart):
-                            print(f"  [AI] {part.content}")
-                else:
-                    for part in msg.parts:
-                        if isinstance(part, UserPromptPart):
-                            print(f"  [User] {part.content}")
+            print(f"  [{i}] {msg}")
       
         result = await dialogue_agent.run(
             user_prompt=student_response,
@@ -85,7 +77,26 @@ async def get_dialogue_response(
         print("[DEBUG] Dialogue Agent Response:")
         print(result.output)
         
-        return result.output, result.all_messages()
+        # Extract the actual reply text from the structured response
+        if hasattr(result.output, 'ai_reply') and hasattr(result.output.ai_reply, 'text'):
+            ai_message = result.output.ai_reply.text
+        else:
+            # Fallback: try to use the output directly if it's a string
+            ai_message = str(result.output)
+        
+        # Extract full response for storage
+        full_response = extract_full_agent_response(result.output)
+        
+        return ai_message, result.all_messages(), full_response
 
     except Exception as e:
         raise RuntimeError(f"dialogue_agent failed: {e}")
+
+def extract_full_agent_response(result_output) -> Dict[str, Any]:
+    """Extract the full agent response including rationale, rule_checks, etc."""
+    if hasattr(result_output, '__dict__'):
+        return result_output.__dict__
+    elif hasattr(result_output, 'dict'):
+        return result_output.dict()
+    else:
+        return {"raw_response": str(result_output)}
