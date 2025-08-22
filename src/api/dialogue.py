@@ -35,7 +35,6 @@ async def save_dialogue_session(
     try:
         session_id = save_dialogue_session_service(
             user_id=session.user_id,
-            messages=[m.dict() for m in session.messages],
             started_at=session.started_at,
             ended_at=session.ended_at
         )
@@ -48,21 +47,21 @@ async def save_current_dialogue_session(
     user_id: str,
     current_user: User = Depends(get_current_user_firebase)
 ):
-    """Save the current dialogue session with full agent responses"""
+    """Save the current dialogue session with structured transcript"""
     # Auth check
     if current_user.user_id != user_id:
         raise HTTPException(status_code=403, detail="Can only save sessions for yourself")
     
     try:
-        # Get conversation with full agent responses from session
-        messages = get_conversation_with_agent_responses(user_id)
+        # Check if there's dialogue history to save
+        from services.user_session_service import get_dialogue_history_from_session
+        dialogue_history = get_dialogue_history_from_session(user_id)
         
-        if not messages:
+        if not dialogue_history:
             raise HTTPException(status_code=400, detail="No conversation to save")
         
         session_id = save_dialogue_session_service(
             user_id=user_id,
-            messages=messages,
             started_at=None,  # Could be enhanced to track session start time
             ended_at=datetime.utcnow().isoformat() + 'Z'
         )
