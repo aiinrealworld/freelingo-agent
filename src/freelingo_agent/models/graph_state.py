@@ -9,6 +9,7 @@ from .words_model import WordSuggestion
 from .referee_model import RefereeAgentOutput
 from .user_session import UserSession
 from .dialogue_session import DialogueSessionRequest
+from .transcript_model import Transcript
 
 
 class GraphState(BaseModel):
@@ -20,6 +21,9 @@ class GraphState(BaseModel):
     
     # Current workflow state
     current_agent: Literal["FEEDBACK", "PLANNER", "NEW_WORDS", "REFEREE"] = "FEEDBACK"
+    
+    # Workflow context
+    transcript: Optional[Transcript] = None
     
     # Agent outputs
     last_dialogue_response: Optional[DialogueResponse] = None

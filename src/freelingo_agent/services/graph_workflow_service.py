@@ -21,6 +21,7 @@ from freelingo_agent.services.llm_service import (
     suggest_new_words,
     referee_utterance,
 )
+from freelingo_agent.services.dialogue_session_service import construct_transcript_from_dialogue_history
 
 # Configure logging
 logfire.configure(send_to_logfire="if-token-present")
@@ -77,35 +78,15 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Use existing session data for feedback
-            context = self._prepare_feedback_context(state)
+            # Use transcript from GraphState (constructed once at workflow start)
+            transcript = state.transcript
             
-            # Build a lightweight transcript string from dialogue history
-            transcript_lines = []
-            try:
-                for msg in (state.user_session.dialogue_history or []):
-                    if hasattr(msg, "parts"):
-                        # ModelRequest (user)
-                        for part in getattr(msg, "parts", []):
-                            part_type = type(part).__name__
-                            if part_type == "UserPromptPart" and part.content and part.content.strip():
-                                transcript_lines.append(f"Student: {part.content}")
-                        # ModelResponse (ai)
-                        for part in getattr(msg, "parts", []):
-                            if type(part).__name__ == "TextPart" and part.content and part.content.strip():
-                                transcript_lines.append(f"AI: {part.content}")
-            except Exception:
-                pass
-            transcript_text = "\n".join(transcript_lines).strip()
-            if not transcript_text:
-                transcript_text = "AI: Bonjour !\nStudent: bonjour"
-
             # Call feedback agent; on failure, fall back to placeholder
             known_words = state.user_session.known_words or []
-            new_words = state.last_words.new_words if state.last_words else None
+            new_words = state.last_words
             try:
                 state.last_feedback = await get_feedback(
-                    transcript=transcript_text,
+                    transcript=transcript,
                     known_words=known_words,
                     new_words=new_words,
                 )
@@ -137,17 +118,16 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Use existing user session data for planning
-            context = self._prepare_planner_context(state)
-            
             # Call planner agent; on failure, fall back to placeholder
             known_words = state.user_session.known_words or []
-            new_words = state.last_words.new_words if state.last_words else None
+            new_words = state.last_words
+            # Use transcript from GraphState (constructed once at workflow start)
+            transcript = state.transcript
             try:
                 state.last_plan = await get_plan(
                     known_words=known_words,
                     new_words=new_words,
-                    dialogue_context=context,
+                    transcript=transcript,
                 )
             except Exception as agent_err:
                 logger.warning(f"planner_agent failed, using fallback: {agent_err}")
@@ -177,9 +157,6 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Use existing user session data for new words
-            context = self._prepare_words_context(state)
-            
             # Call words agent; on failure, fall back to placeholder
             known_words = state.user_session.known_words or []
             try:
@@ -212,9 +189,6 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Use existing session data for referee decision
-            context = self._prepare_referee_context(state)
-            
             # Determine last learner utterance from history (fallback to empty)
             learner_utterance = ""
             try:
@@ -229,7 +203,7 @@ class GraphWorkflowService:
 
             # Call referee agent; on failure, fall back to permissive decision
             known_words = state.user_session.known_words or []
-            new_words = state.last_words.new_words if state.last_words else None
+            new_words = state.last_words
             try:
                 state.last_referee_decision = await referee_utterance(
                     learner_utterance=learner_utterance,
@@ -280,49 +254,6 @@ class GraphWorkflowService:
             return "END"
         return state.next_agent
     
-    def _prepare_feedback_context(self, state: GraphState) -> str:
-        """Prepare context for feedback agent using existing session data"""
-        context = f"""
-        User ID: {state.user_id}
-        Dialogue History: {len(state.user_session.dialogue_history)} exchanges
-        Known Words: {', '.join(state.user_session.known_words)}
-        Last Agent Response: {state.user_session.last_agent_response}
-        """
-        return context
-    
-    def _prepare_planner_context(self, state: GraphState) -> str:
-        """Prepare context for planner agent using existing session data"""
-        if not state.last_feedback:
-            return "No feedback available"
-        
-        context = f"""
-        User ID: {state.user_id}
-        Known Words: {', '.join(state.user_session.known_words)}
-        Feedback Strengths: {', '.join(state.last_feedback.strengths)}
-        Areas for Improvement: {', '.join([issue.kind for issue in state.last_feedback.issues])}
-        Next Focus Areas: {', '.join(state.last_feedback.next_focus_areas)}
-        """
-        return context
-    
-    def _prepare_words_context(self, state: GraphState) -> str:
-        """Prepare context for words agent using existing session data"""
-        context = f"""
-        User ID: {state.user_id}
-        Known Words: {', '.join(state.user_session.known_words)}
-        Dialogue History Length: {len(state.user_session.dialogue_history)}
-        """
-        return context
-    
-    def _prepare_referee_context(self, state: GraphState) -> str:
-        """Prepare context for referee agent using existing session data"""
-        context = f"""
-        User ID: {state.user_id}
-        Known Words: {', '.join(state.user_session.known_words)}
-        Feedback: {state.last_feedback.strengths if state.last_feedback else 'None'}
-        Plan: {state.last_plan.session_objectives if state.last_plan else 'None'}
-        New Words: {state.last_words.new_words if state.last_words else 'None'}
-        """
-        return context
     
     async def trigger_feedback_loop(self, state: GraphState) -> GraphState:
         """Trigger the post-session learning workflow: feedback → planner → words → referee"""
