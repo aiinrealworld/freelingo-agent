@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Any
 def save_dialogue_session_service(user_id: str, messages: List[dict] = None, started_at: Optional[str] = None, ended_at: Optional[str] = None) -> str:
     from datetime import datetime
     from uuid import uuid4
-    from services.user_session_service import clear_dialogue_in_session
+    from freelingo_agent.services.user_session_service import clear_dialogue_in_session
     
     # Construct the transcript from dialogue history
     transcript = construct_transcript_from_dialogue_history(user_id)
@@ -130,7 +130,7 @@ def construct_transcript_from_dialogue_history(user_id: str) -> Transcript:
             )
         else:
             # Fallback if agent response is not properly structured
-            from models.dialogue_model import Rationale, VocabularyChallenge, RuleChecks, AiReply
+            from freelingo_agent.models.dialogue_model import Rationale, VocabularyChallenge, RuleChecks, AiReply
             ai_turn = AiTurn(
                 rationale=Rationale(
                     reasoning_summary="No rationale available",

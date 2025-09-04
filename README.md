@@ -54,22 +54,65 @@ python -m pytest
 python -m pytest tests/integration/test_workflow.py -v
 ```
 
-## 🔄 **LangGraph Workflow**
+## 🔄 LangGraph Workflow
 
-The application implements a learning workflow using LangGraph:
+This app orchestrates a multi-agent learning workflow with LangGraph. The flow is:
 
-1. **DIALOGUE** → User initiates conversation
-2. **FEEDBACK** → Generate feedback after session
-3. **PLANNER** → Create learning plan
-4. **NEW_WORDS** → Introduce vocabulary
-5. **REFEREE** → Evaluate and route to next step
+```
+User initiates → DIALOGUE
+                    ↓
+Session ends → FEEDBACK → PLANNER → NEW_WORDS → REFEREE
+                                                  ↓
+REFEREE routes to: PLANNER, NEW_WORDS, FEEDBACK, or END
+```
 
-## 📚 **API Endpoints**
+### Key Components
+- **DIALOGUE**: User-controlled conversation sessions
+- **FEEDBACK**: Analyzes session performance and provides insights
+- **PLANNER**: Creates learning plans based on feedback
+- **NEW_WORDS**: Introduces appropriate vocabulary
+- **REFEREE**: Evaluates and decides next learning steps
 
-- `POST /api/workflow/start-session` - Start learning session
-- `POST /api/workflow/end-session` - End session and trigger workflow
-- `POST /api/workflow/test-workflow` - Test complete workflow
-- `GET /api/health` - Health check
+### Trigger Model
+- The workflow is triggered when a dialogue session ends (i.e., after saving a transcript via the dialogue session endpoints). The dedicated workflow endpoints have been removed.
+
+### Files
+- `src/freelingo_agent/models/graph_state.py` — State models
+- `src/freelingo_agent/services/graph_workflow_service.py` — Orchestration logic
+- `src/freelingo_agent/api/dialogue.py` — Dialogue + session endpoints (triggers workflow after save)
+
+### How It Works
+1. Session start: User initiates dialogue
+2. Dialogue active: User and AI converse
+3. Session end: API saves transcript and triggers workflow
+4. Feedback → Planning → New Words → Referee
+5. Referee can route to any agent or end
+
+### Agent Integration
+Each agent node:
+- Receives context from the state
+- Processes using the appropriate agent in `services/llm_service.py`
+- Updates the state with results
+- Logs activities for monitoring (Logfire)
+
+### Testing the Workflow
+```python
+from freelingo_agent.services.graph_workflow_service import GraphWorkflowService
+
+service = GraphWorkflowService()
+state = await service.start_session("test_user")
+final_state = await service.end_session(state)
+assert final_state.last_feedback is not None
+```
+
+## 📚 API Endpoints
+
+- `POST /api/dialogue` — Run a dialogue turn
+- `POST /api/dialogue-session` — Save a provided session (triggers workflow)
+- `POST /api/dialogue-session/current/{user_id}` — Save current in-memory session (triggers workflow)
+- `GET /api/dialogue-sessions/{user_id}` — List sessions
+- `GET /api/dialogue-session/{session_id}` — Get one session
+- `GET /api/health` — Health check
 
 ## 🧪 **Testing**
 

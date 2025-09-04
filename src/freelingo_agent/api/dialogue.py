@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from freelingo_agent.services.dialogue_service import run_dialogue_turn
 from freelingo_agent.services.dialogue_session_service import save_dialogue_session_service, list_dialogue_sessions_service, get_dialogue_session_service, get_conversation_with_agent_responses
+from freelingo_agent.services.graph_workflow_service import GraphWorkflowService
 from freelingo_agent.models.dialogue_session import DialogueSessionRequest, DialogueSessionResponse
 from freelingo_agent.models.user import User
 from freelingo_agent.services.auth_service import get_current_user
@@ -10,6 +11,7 @@ from typing import Any
 from datetime import datetime
 
 router = APIRouter()
+workflow_service = GraphWorkflowService()
 
 class DialogueRequest(BaseModel):
     message: str
@@ -39,6 +41,15 @@ async def save_dialogue_session(
             started_at=session.started_at,
             ended_at=session.ended_at
         )
+        # Trigger workflow after successful save
+        from freelingo_agent.models.graph_state import GraphState
+        from freelingo_agent.models.user_session import UserSession
+        state = GraphState(
+            user_id=session.user_id,
+            user_session=UserSession(user_id=session.user_id),
+            session_goals=["Practice conversation", "Learn new vocabulary"]
+        )
+        await workflow_service.end_session(state)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return DialogueSessionResponse(session_id=session_id, status="saved")
@@ -65,6 +76,15 @@ async def save_current_dialogue_session(
             started_at=None,  # Could be enhanced to track session start time
             ended_at=datetime.utcnow().isoformat() + 'Z'
         )
+        # Trigger workflow after saving current session
+        from freelingo_agent.models.graph_state import GraphState
+        from freelingo_agent.models.user_session import UserSession
+        state = GraphState(
+            user_id=user_id,
+            user_session=UserSession(user_id=user_id),
+            session_goals=["Practice conversation", "Learn new vocabulary"]
+        )
+        await workflow_service.end_session(state)
         
         return DialogueSessionResponse(session_id=session_id, status="saved")
     except Exception as e:
