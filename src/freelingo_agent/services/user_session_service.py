@@ -2,6 +2,7 @@ from typing import List, Dict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from freelingo_agent.models.user_session import UserSession
+from freelingo_agent.models.words_model import Word
 from pydantic_ai.messages import ModelMessage
 
 # In-memory store (replace with Redis or Supabase later)
@@ -16,7 +17,7 @@ def get_session(user_id: str) -> UserSession:
     return session
 
 
-def update_known_words_in_session(user_id: str, words: List[str]) -> None:
+def update_known_words_in_session(user_id: str, words: List[Word]) -> None:
     session = get_session(user_id)
     session.known_words = words
     session.updated_at = datetime.now(timezone.utc)

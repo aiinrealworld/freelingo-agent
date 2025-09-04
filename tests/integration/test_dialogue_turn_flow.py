@@ -21,7 +21,7 @@ async def test_run_dialogue_turn_fetches_known_words_and_returns_ai_response():
     session.dialogue_history = []
 
     # Act
-    ai_response = await run_dialogue_turn(
+    ai_response, full_response = await run_dialogue_turn(
         user_id=TEST_USER_ID, 
         student_response=""
     )
@@ -31,12 +31,14 @@ async def test_run_dialogue_turn_fetches_known_words_and_returns_ai_response():
     # Assert
     assert isinstance(ai_response, str)
     assert len(ai_response) > 0
+    assert isinstance(full_response, dict)
 
     # Confirm conversation history updated
     history = get_dialogue_history_from_session(TEST_USER_ID)
-    assert len(history) == 2
+    assert len(history) == 3  # System prompt + user input + AI response + tool return
     assert isinstance(history[0], ModelRequest)  # System/user prompt
     assert isinstance(history[1], ModelResponse)  # AI's generated message
+    assert isinstance(history[2], ModelRequest)  # Tool return
 
 
 from pydantic_ai.messages import ModelMessage
@@ -70,7 +72,7 @@ async def test_dialogue_turns_with_known_and_new_words_10_turns():
     for student_response in student_responses:
 
         # Get AI message
-        ai_message, new_history = await get_dialogue_response(
+        ai_message, new_history, full_response = await get_dialogue_response(
             user_id=TEST_USER_ID,
             known_words=session.known_words,
             student_response=student_response,
@@ -82,7 +84,7 @@ async def test_dialogue_turns_with_known_and_new_words_10_turns():
 
     # Confirm conversation history updated
     history = get_dialogue_history_from_session(TEST_USER_ID)
-    assert len(history) == 10
+    assert len(history) == 15  # 5 turns * 3 messages each (user input + AI response + tool return)
 
     assert isinstance(history[0], ModelRequest)  # System/user prompt
     assert isinstance(history[1], ModelResponse)  # AI's generated message

@@ -3,12 +3,12 @@
 from freelingo_agent.db.words import get_known_words, get_user_words
 from typing import List
 
-from freelingo_agent.models.words_model import WordSuggestion
+from freelingo_agent.models.words_model import WordSuggestion, Word
 from freelingo_agent.services.llm_service import suggest_new_words
 from freelingo_agent.services.user_session_service import update_known_words_in_session
 
-def fetch_known_words(user_id: str) -> List[str]:
-    known_words = get_known_words(user_id)
+def fetch_known_words(user_id: str) -> List[Word]:
+    known_words = get_user_words(user_id)
     update_known_words_in_session(user_id=user_id, words=known_words)
     return known_words
 

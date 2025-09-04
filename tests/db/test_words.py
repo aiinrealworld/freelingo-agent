@@ -79,7 +79,7 @@ def test_get_user_words(monkeypatch):
 # ---- create_word ----
 def test_create_word(monkeypatch):
     from freelingo_agent.db import words  # ensure you're importing the right context
-    from freelingo_agent.models.words_model import WordCreate
+    from freelingo_agent.models.words_model import Word
 
     class MockInsert:
         def __init__(self, data):
@@ -102,7 +102,7 @@ def test_create_word(monkeypatch):
     monkeypatch.setattr(words.supabase, "from_", lambda table: MockFrom())
 
     # Run the function
-    word_data = WordCreate(
+    word_data = Word(
         word="bonjour",
         translation="hello",
         example="Bonjour!",

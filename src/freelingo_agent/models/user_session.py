@@ -2,10 +2,11 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 from pydantic_ai.messages import ModelMessage
+from freelingo_agent.models.words_model import Word
 
 class UserSession(BaseModel):
     user_id: str
-    known_words: List[str] = Field(default_factory=list)
+    known_words: List[Word] = Field(default_factory=list)
     new_words: List[str] = Field(default_factory=list)  # Add new_words field
     dialogue_agent: Optional[Any] = None  # Using Any to avoid type annotation issues
     dialogue_history: List[ModelMessage] = Field(default_factory=list)
