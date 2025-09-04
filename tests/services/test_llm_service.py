@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import patch
-from models.words_model import WordSuggestion
-from services.words_service import suggest_new_words_for_user
+from freelingo_agent.models.words_model import WordSuggestion
+from freelingo_agent.services.words_service import suggest_new_words_for_user
 from unittest.mock import patch, AsyncMock
 import json
 
 @pytest.mark.asyncio
-@patch("services.words_service.fetch_known_words")
-@patch("services.llm_service.words_agent")
+@patch("freelingo_agent.services.words_service.fetch_known_words")
+@patch("freelingo_agent.services.llm_service.words_agent")
 async def test_suggest_new_words_for_user(mock_words_agent, mock_fetch_known_words):
     # Mock DB result
     mock_fetch_known_words.return_value = ["bonjour", "voyage", "train"]

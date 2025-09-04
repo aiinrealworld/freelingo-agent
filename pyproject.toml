@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "freelingo-agent"
+version = "0.1.0"
+description = "AI-powered language learning agent with LangGraph workflow"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "pydantic>=2.0.0",
+    "langgraph>=0.6.0",
+    "openai>=1.0.0",
+    "pydantic-ai>=0.1.0",
+    "logfire>=0.1.0",
+    "supabase>=2.0.0",
+    "firebase-admin>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+
+[project.scripts]
+freelingo = "freelingo_agent.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+markers = [
+    "integration: marks tests that require Supabase + real LLM"
+]

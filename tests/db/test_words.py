@@ -1,7 +1,7 @@
 # tests/db/test_words.py
 
 import pytest
-from db import words
+from freelingo_agent.db import words
 
 class MockResponse:
     def __init__(self, data=None):
@@ -9,7 +9,7 @@ class MockResponse:
 
 # ---- get_known_words ----
 def test_get_known_words(monkeypatch):
-    from db import words  # Ensure test gets the real context
+    from freelingo_agent.db import words  # Ensure test gets the real context
 
     class MockQuery:
         def select(self, fields):
@@ -38,7 +38,7 @@ def test_get_known_words(monkeypatch):
 
 # ---- get_user_words ----
 def test_get_user_words(monkeypatch):
-    from db import words  # Make sure this import is inside the test to access the right context
+    from freelingo_agent.db import words  # Make sure this import is inside the test to access the right context
     from datetime import datetime
 
     class MockQuery:
@@ -78,8 +78,8 @@ def test_get_user_words(monkeypatch):
 
 # ---- create_word ----
 def test_create_word(monkeypatch):
-    from db import words  # ensure you're importing the right context
-    from models.words_model import WordCreate
+    from freelingo_agent.db import words  # ensure you're importing the right context
+    from freelingo_agent.models.words_model import WordCreate
 
     class MockInsert:
         def __init__(self, data):
@@ -117,7 +117,7 @@ def test_create_word(monkeypatch):
 
 # ---- delete_word ----
 def test_delete_word(monkeypatch):
-    from db import words  # Ensure correct context
+    from freelingo_agent.db import words  # Ensure correct context
     deleted = []
 
     class MockDeleteQuery:
@@ -126,7 +126,7 @@ def test_delete_word(monkeypatch):
             return self
 
         def execute(self):
-            deleted.append(tuple(v for _, v in self.calls))
+            deleted.append(self.calls)  # Store the full list of calls
             return MockResponse(data=[{"id": "123"}])
 
         def __init__(self):
@@ -142,5 +142,5 @@ def test_delete_word(monkeypatch):
     result = words.delete_word("123")
 
     # Assert expected delete arguments and return value
-    assert deleted[0] == ("id", "123")
+    assert deleted[0] == [("id", "123")]  # Check the full list of calls
     assert result == True
