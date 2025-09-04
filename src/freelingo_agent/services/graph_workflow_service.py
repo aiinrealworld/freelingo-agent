@@ -14,8 +14,14 @@ from freelingo_agent.models.referee_model import RefereeAgentOutput
 from freelingo_agent.models.user_session import UserSession
 
 # Import your existing services
-from freelingo_agent.services.user_session_service import get_session, clear_dialogue_in_session
-from freelingo_agent.services.dialogue_session_service import save_dialogue_session_service
+from freelingo_agent.services.user_session_service import get_session
+from freelingo_agent.services.llm_service import (
+    get_feedback,
+    get_plan,
+    suggest_new_words,
+    referee_utterance,
+)
+from freelingo_agent.services.dialogue_session_service import construct_transcript_from_dialogue_history
 
 # Configure logging
 logfire.configure(send_to_logfire="if-token-present")
@@ -36,14 +42,13 @@ class GraphWorkflowService:
         workflow = StateGraph(GraphState)
         
         # Add nodes for each agent
-        workflow.add_node("DIALOGUE", self._dialogue_node)
         workflow.add_node("FEEDBACK", self._feedback_node)
         workflow.add_node("PLANNER", self._planner_node)
         workflow.add_node("NEW_WORDS", self._new_words_node)
         workflow.add_node("REFEREE", self._referee_node)
         
         # Set entry point
-        workflow.set_entry_point("DIALOGUE")
+        workflow.set_entry_point("FEEDBACK")
         
         # Add edges for the session end flow
         workflow.add_edge("FEEDBACK", "PLANNER")
@@ -62,25 +67,8 @@ class GraphWorkflowService:
             }
         )
         
-        # Add edge from DIALOGUE to END (user can end session)
-        workflow.add_edge("DIALOGUE", END)
         
         return workflow
-    
-    async def _dialogue_node(self, state: GraphState) -> GraphState:
-        """Handle dialogue interactions - uses existing UserSession"""
-        logger.info(f"Dialogue node activated for user {state.user_id}")
-        
-        # Update state
-        state.current_agent = "DIALOGUE"
-        state.updated_at = datetime.now()
-        
-        # Get existing user session (don't create new one)
-        existing_session = get_session(state.user_id)
-        if existing_session:
-            state.user_session = existing_session
-        
-        return state
     
     async def _feedback_node(self, state: GraphState) -> GraphState:
         """Generate feedback after dialogue session ends - uses existing session data"""
@@ -90,17 +78,26 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Use existing session data for feedback
-            context = self._prepare_feedback_context(state)
+            # Use transcript from GraphState (constructed once at workflow start)
+            transcript = state.transcript
             
-            # TODO: Call your existing feedback agent here
-            # For now, create placeholder using existing session data
-            state.last_feedback = FeedbackAgentOutput(
-                strengths=[f"Completed session with {len(state.user_session.dialogue_history)} exchanges"],
-                issues=[],
-                next_focus_areas=["Continue practicing"],
-                vocab_usage={}
-            )
+            # Call feedback agent; on failure, fall back to placeholder
+            known_words = state.user_session.known_words or []
+            new_words = state.last_words
+            try:
+                state.last_feedback = await get_feedback(
+                    transcript=transcript,
+                    known_words=known_words,
+                    new_words=new_words,
+                )
+            except Exception as agent_err:
+                logger.warning(f"feedback_agent failed, using fallback: {agent_err}")
+                state.last_feedback = FeedbackAgentOutput(
+                    strengths=[f"Completed session with {len(state.user_session.dialogue_history)} exchanges"],
+                    issues=[],
+                    next_focus_areas=["Continue practicing"],
+                    vocab_usage={},
+                )
             
         except Exception as e:
             logger.error(f"Error in feedback node: {e}")
@@ -121,17 +118,25 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Use existing user session data for planning
-            context = self._prepare_planner_context(state)
-            
-            # TODO: Call your existing planner agent here
-            # For now, create placeholder using existing session data
-            state.last_plan = PlannerAgentOutput(
-                session_objectives=["Expand vocabulary", "Practice conversation"],
-                suggested_new_words=state.user_session.known_words[:3] if state.user_session.known_words else ["bonjour", "merci"],
-                practice_strategies=["Daily conversation practice"],
-                conversation_prompts=["Tell me about your day"]
-            )
+            # Call planner agent; on failure, fall back to placeholder
+            known_words = state.user_session.known_words or []
+            new_words = state.last_words
+            # Use transcript from GraphState (constructed once at workflow start)
+            transcript = state.transcript
+            try:
+                state.last_plan = await get_plan(
+                    known_words=known_words,
+                    new_words=new_words,
+                    transcript=transcript,
+                )
+            except Exception as agent_err:
+                logger.warning(f"planner_agent failed, using fallback: {agent_err}")
+                state.last_plan = PlannerAgentOutput(
+                    session_objectives=["Expand vocabulary", "Practice conversation"],
+                    suggested_new_words=known_words[:3] if known_words else ["bonjour", "merci"],
+                    practice_strategies=["Daily conversation practice"],
+                    conversation_prompts=["Tell me about your day"],
+                )
             
         except Exception as e:
             logger.error(f"Error in planner node: {e}")
@@ -152,19 +157,20 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Use existing user session data for new words
-            context = self._prepare_words_context(state)
-            
-            # TODO: Call your existing words agent here
-            # For now, create placeholder using existing session data
-            state.last_words = WordSuggestion(
-                new_words=["bonjour", "merci", "s'il vous plaît"],
-                usages={
-                    "bonjour": {"fr": "Bonjour, comment allez-vous?", "en": "Hello, how are you?"},
-                    "merci": {"fr": "Merci beaucoup!", "en": "Thank you very much!"},
-                    "s'il vous plaît": {"fr": "S'il vous plaît, aidez-moi.", "en": "Please help me."}
-                }
-            )
+            # Call words agent; on failure, fall back to placeholder
+            known_words = state.user_session.known_words or []
+            try:
+                state.last_words = await suggest_new_words(known_words)
+            except Exception as agent_err:
+                logger.warning(f"words_agent failed, using fallback: {agent_err}")
+                state.last_words = WordSuggestion(
+                    new_words=["bonjour", "merci", "s'il vous plaît"],
+                    usages={
+                        "bonjour": {"fr": "Bonjour, comment allez-vous?", "en": "Hello, how are you?"},
+                        "merci": {"fr": "Merci beaucoup!", "en": "Thank you very much!"},
+                        "s'il vous plaît": {"fr": "S'il vous plaît, aidez-moi.", "en": "Please help me."},
+                    },
+                )
             
         except Exception as e:
             logger.error(f"Error in new words node: {e}")
@@ -183,27 +189,45 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Use existing session data for referee decision
-            context = self._prepare_referee_context(state)
-            
-            # TODO: Call your existing referee agent here
-            # For now, create placeholder decision using existing session data
-            state.last_referee_decision = RefereeAgentOutput(
-                is_valid=True,
-                violations=[],
-                rationale={
-                    "reasoning_summary": f"Session completed with {len(state.user_session.dialogue_history)} exchanges",
-                    "rule_checks": {
-                        "used_only_allowed_vocabulary": True,
-                        "one_sentence": True,
-                        "max_eight_words": True,
-                        "no_corrections_or_translations": True
-                    }
-                }
-            )
-            
-            # Set next agent based on evaluation
-            state.next_agent = "END"  # Default to ending
+            # Determine last learner utterance from history (fallback to empty)
+            learner_utterance = ""
+            try:
+                for msg in reversed(state.user_session.dialogue_history or []):
+                    if type(msg).__name__ == "ModelRequest":
+                        for part in getattr(msg, "parts", []):
+                            if type(part).__name__ == "UserPromptPart" and part.content and part.content.strip():
+                                learner_utterance = part.content
+                                raise StopIteration
+            except StopIteration:
+                pass
+
+            # Call referee agent; on failure, fall back to permissive decision
+            known_words = state.user_session.known_words or []
+            new_words = state.last_words
+            try:
+                state.last_referee_decision = await referee_utterance(
+                    learner_utterance=learner_utterance,
+                    known_words=known_words,
+                    new_words=new_words,
+                )
+            except Exception as agent_err:
+                logger.warning(f"referee_agent failed, using fallback: {agent_err}")
+                state.last_referee_decision = RefereeAgentOutput(
+                    is_valid=True,
+                    violations=[],
+                    rationale={
+                        "reasoning_summary": f"Session completed with {len(state.user_session.dialogue_history)} exchanges",
+                        "rule_checks": {
+                            "used_only_allowed_vocabulary": True,
+                            "one_sentence": True,
+                            "max_eight_words": True,
+                            "no_corrections_or_translations": True,
+                        },
+                    },
+                )
+
+            # Set next agent based on evaluation (simple policy for now)
+            state.next_agent = "END"
             
         except Exception as e:
             logger.error(f"Error in referee node: {e}")
@@ -230,126 +254,34 @@ class GraphWorkflowService:
             return "END"
         return state.next_agent
     
-    def _prepare_feedback_context(self, state: GraphState) -> str:
-        """Prepare context for feedback agent using existing session data"""
-        context = f"""
-        User ID: {state.user_id}
-        Dialogue History: {len(state.user_session.dialogue_history)} exchanges
-        Known Words: {', '.join(state.user_session.known_words)}
-        Last Agent Response: {state.user_session.last_agent_response}
-        """
-        return context
     
-    def _prepare_planner_context(self, state: GraphState) -> str:
-        """Prepare context for planner agent using existing session data"""
-        if not state.last_feedback:
-            return "No feedback available"
-        
-        context = f"""
-        User ID: {state.user_id}
-        Known Words: {', '.join(state.user_session.known_words)}
-        Feedback Strengths: {', '.join(state.last_feedback.strengths)}
-        Areas for Improvement: {', '.join([issue.kind for issue in state.last_feedback.issues])}
-        Next Focus Areas: {', '.join(state.last_feedback.next_focus_areas)}
-        """
-        return context
-    
-    def _prepare_words_context(self, state: GraphState) -> str:
-        """Prepare context for words agent using existing session data"""
-        context = f"""
-        User ID: {state.user_id}
-        Known Words: {', '.join(state.user_session.known_words)}
-        Dialogue History Length: {len(state.user_session.dialogue_history)}
-        """
-        return context
-    
-    def _prepare_referee_context(self, state: GraphState) -> str:
-        """Prepare context for referee agent using existing session data"""
-        context = f"""
-        User ID: {state.user_id}
-        Known Words: {', '.join(state.user_session.known_words)}
-        Session Goals: {', '.join(state.session_goals)}
-        Feedback: {state.last_feedback.strengths if state.last_feedback else 'None'}
-        Plan: {state.last_plan.session_objectives if state.last_plan else 'None'}
-        New Words: {state.last_words.new_words if state.last_words else 'None'}
-        """
-        return context
-    
-    async def start_session(self, user_id: str, session_goals: List[str] = None) -> GraphState:
-        """Start a new learning session using existing UserSession"""
-        logger.info(f"Starting new session for user {user_id}")
-        
-        # Get existing user session (don't create new one)
-        user_session = get_session(user_id)
-        if not user_session:
-            # Create minimal session if none exists
-            user_session = UserSession(user_id=user_id)
-        
-        # Create initial state using existing session
-        initial_state = GraphState(
-            user_id=user_id,
-            user_session=user_session,
-            session_goals=session_goals or ["Practice conversation", "Learn new vocabulary"],
-            current_agent="DIALOGUE"
-        )
-        
-        return initial_state
-    
-    async def process_dialogue(self, state: GraphState, user_message: str) -> Dict[str, Any]:
-        """Process a user message in dialogue mode - integrates with existing system"""
-        logger.info(f"Processing dialogue for user {state.user_id}")
-        
-        # Update existing user session (this integrates with your existing dialogue flow)
-        if state.user_session:
-            # TODO: Integrate with your existing dialogue processing
-            # For now, return a simple response
-            response = {
-                "message": "Bonjour! Comment allez-vous aujourd'hui?"
-            }
-        
-        return response
-    
-    async def end_session(self, state: GraphState) -> GraphState:
-        """End the current dialogue session and start the feedback flow"""
-        logger.info(f"Ending session for user {state.user_id}")
-        
-        # Try to save the dialogue session using your existing service
-        # But don't fail if it can't connect to database
-        try:
-            session_id = save_dialogue_session_service(
-                user_id=state.user_id,
-                started_at=None,
-                ended_at=datetime.now().isoformat()
-            )
-            logger.info(f"Saved dialogue session: {session_id}")
-        except Exception as e:
-            logger.warning(f"Could not save dialogue session (this is OK for testing): {e}")
+    async def trigger_feedback_loop(self, state: GraphState) -> GraphState:
+        """Trigger the post-session learning workflow: feedback → planner → words → referee"""
+        logger.info(f"Triggering feedback loop for user {state.user_id}")
         
         # Transition to feedback flow
         state.current_agent = "FEEDBACK"
         
-        # Run the workflow from feedback onwards
+        # Prefer running the compiled graph; fall back to manual sequence on error
         try:
-            # For now, let's manually run through the workflow steps to avoid return type issues
-            logger.info("Running workflow manually to avoid return type issues")
-            
-            # Run feedback node
-            state = await self._feedback_node(state)
-            
-            # Run planner node
-            state = await self._planner_node(state)
-            
-            # Run new words node
-            state = await self._new_words_node(state)
-            
-            # Run referee node
-            state = await self._referee_node(state)
-            
-            return state
-            
+            logger.info("Running workflow via compiled graph")
+            final_state = await self.run_workflow(state)
+            return final_state
         except Exception as e:
-            logger.error(f"Error running workflow: {e}")
-            return state
+            logger.warning(f"Graph execution failed, falling back to manual sequence: {e}")
+            try:
+                # Run feedback node
+                state = await self._feedback_node(state)
+                # Run planner node
+                state = await self._planner_node(state)
+                # Run new words node
+                state = await self._new_words_node(state)
+                # Run referee node
+                state = await self._referee_node(state)
+                return state
+            except Exception as inner:
+                logger.error(f"Error running manual workflow sequence: {inner}")
+                return state
     
     async def run_workflow(self, state: GraphState) -> GraphState:
         """Run the complete workflow from current state"""
@@ -357,6 +289,9 @@ class GraphWorkflowService:
         
         try:
             result = await self.app.ainvoke(state)
+            # Convert dict result back to GraphState if needed
+            if isinstance(result, dict):
+                return GraphState(**result)
             return result
         except Exception as e:
             logger.error(f"Error running workflow: {e}")

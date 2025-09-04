@@ -6,6 +6,7 @@ from freelingo_agent.models.words_model import WordSuggestion
 from freelingo_agent.models.feedback_model import FeedbackAgentOutput
 from freelingo_agent.models.planner_model import PlannerAgentOutput
 from freelingo_agent.models.referee_model import RefereeAgentOutput
+from freelingo_agent.models.transcript_model import Transcript
 from freelingo_agent.services.user_session_service import get_session
 from freelingo_agent.agents.words_agent import words_agent
 from freelingo_agent.agents.agents_config import DIALOGUE_AGENT_PROMPT
@@ -111,9 +112,9 @@ def extract_full_agent_response(result_output) -> Dict[str, Any]:
 
 
 async def get_feedback(
-    transcript: str,
+    transcript: Transcript,
     known_words: List[str],
-    new_words: Optional[List[str]] = None,
+    new_words: Optional[WordSuggestion] = None,
 ) -> FeedbackAgentOutput:
     """
     Calls the feedback_agent with the provided transcript and vocabulary context.
@@ -121,13 +122,16 @@ async def get_feedback(
     """
 
     try:
+        # Convert Transcript model to rich JSON-style string format for the agent
+        transcript_text = json.dumps(transcript.model_dump(), indent=2, ensure_ascii=False)
+
         # Build INPUT block as per few-shots
         parts = []
         parts.append(f"known_words: {json.dumps(known_words, ensure_ascii=False)}")
-        if new_words:
-            parts.append(f"new_words: {json.dumps(new_words, ensure_ascii=False)}")
+        if new_words and new_words.new_words:
+            parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
         parts.append("Transcript:")
-        parts.append(transcript.strip())
+        parts.append(transcript_text)
         parts.append("END")
         user_prompt = "\n".join(parts)
 
@@ -140,8 +144,8 @@ async def get_feedback(
 
 async def get_plan(
     known_words: List[str],
-    new_words: Optional[List[str]] = None,
-    dialogue_context: Optional[str] = None,
+    new_words: Optional[WordSuggestion] = None,
+    transcript: Optional[Transcript] = None,
 ) -> PlannerAgentOutput:
     """
     Calls the planner_agent to create a practice plan for the next session.
@@ -152,10 +156,12 @@ async def get_plan(
         # Build INPUT block as per few-shots
         parts = []
         parts.append(f"known_words: {json.dumps(known_words, ensure_ascii=False)}")
-        if new_words:
-            parts.append(f"new_words: {json.dumps(new_words, ensure_ascii=False)}")
-        if dialogue_context:
-            parts.append(dialogue_context)
+        if new_words and new_words.new_words:
+            parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
+        if transcript and transcript.transcript:
+            # Add rich transcript context with full metadata
+            transcript_json = json.dumps(transcript.model_dump(), indent=2, ensure_ascii=False)
+            parts.append(f"transcript: {transcript_json}")
         parts.append("END")
         user_prompt = "\n".join(parts)
 
@@ -169,7 +175,7 @@ async def get_plan(
 async def referee_utterance(
     learner_utterance: str,
     known_words: List[str],
-    new_words: Optional[List[str]] = None,
+    new_words: Optional[WordSuggestion] = None,
 ) -> RefereeAgentOutput:
     """
     Calls the referee_agent to evaluate a learner utterance against session rules.
@@ -180,8 +186,8 @@ async def referee_utterance(
         # Build INPUT block as per few-shots
         parts = []
         parts.append(f"known_words: {json.dumps(known_words, ensure_ascii=False)}")
-        if new_words:
-            parts.append(f"new_words: {json.dumps(new_words, ensure_ascii=False)}")
+        if new_words and new_words.new_words:
+            parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
         parts.append(f"Learner utterance: \"{learner_utterance}\"")
         parts.append("Rules: one sentence, max 8 words, allowed vocab only.")
         parts.append("END")

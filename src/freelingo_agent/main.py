@@ -5,7 +5,6 @@ from freelingo_agent.api.auth import router as auth_router
 from freelingo_agent.api.voice import router as voice_router
 from freelingo_agent.api.words import router as words_router
 from freelingo_agent.api.dialogue import router as dialogue_router
-from freelingo_agent.api.graph_workflow_api import router as workflow_router
 
 app = FastAPI(title="FreeLingo API", version="1.0.0")
 
@@ -28,7 +27,6 @@ app.include_router(auth_router)
 app.include_router(voice_router)
 app.include_router(words_router, prefix="/api")
 app.include_router(dialogue_router, prefix="/api")
-app.include_router(workflow_router, prefix="/api")
 
 # Health check endpoint
 @app.get("/api/health")

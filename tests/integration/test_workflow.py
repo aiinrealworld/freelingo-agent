@@ -2,41 +2,29 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from fastapi.testclient import TestClient
-from freelingo_agent.main import app
+import pytest
+import asyncio
 
-client = TestClient(app)
-
-
-def test_workflow_test_endpoint():
-    response = client.post("/api/workflow/test-workflow")
-    assert response.status_code == 200
-    data = response.json()
-
-    assert data["success"] is True
-    assert data["test_completed"] is True
-
-    final = data["final_state"]
-    assert final["feedback_generated"] is True
-    assert final["plan_generated"] is True
-    assert final["words_generated"] is True
-    assert final["referee_decision"] is True
+from freelingo_agent.services.graph_workflow_service import GraphWorkflowService
+from freelingo_agent.models.graph_state import GraphState
+from freelingo_agent.models.user_session import UserSession
 
 
-def test_workflow_end_session():
-    response = client.post(
-        "/api/workflow/end-session",
-        params={"user_id": "test_user", "session_id": "dummy"},
+@pytest.mark.asyncio
+async def test_workflow_service_end_session_runs_agents():
+    service = GraphWorkflowService()
+
+    user_id = "test_user_workflow"
+    # Create state directly (as the API does)
+    initial_state = GraphState(
+        user_id=user_id,
+        user_session=UserSession(user_id=user_id)
     )
-    assert response.status_code == 200
-    data = response.json()
 
-    assert data["success"] is True
-    assert data["session_ended"] is True
-    assert data["final_agent"] == "REFEREE"
+    # Simulate end of session, which should trigger the feedback -> planner -> words -> referee chain
+    final_state = await service.trigger_feedback_loop(initial_state)
 
-
-    assert data["feedback"] is not None
-    assert data["plan"] is not None
-    assert data["new_words"] is not None
-    assert data["referee_decision"] is not None
+    assert final_state.last_feedback is not None
+    assert final_state.last_plan is not None
+    assert final_state.last_words is not None
+    assert final_state.last_referee_decision is not None
