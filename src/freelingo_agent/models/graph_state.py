@@ -19,7 +19,7 @@ class GraphState(BaseModel):
     dialogue_session: Optional[DialogueSessionRequest] = None
     
     # Current workflow state
-    current_agent: Literal["DIALOGUE", "FEEDBACK", "PLANNER", "NEW_WORDS", "REFEREE"] = "DIALOGUE"
+    current_agent: Literal["FEEDBACK", "PLANNER", "NEW_WORDS", "REFEREE"] = "FEEDBACK"
     
     # Agent outputs
     last_dialogue_response: Optional[DialogueResponse] = None
@@ -35,7 +35,6 @@ class GraphState(BaseModel):
     # Context for agents (derived from existing session data)
     conversation_context: str = ""
     learning_focus: List[str] = Field(default_factory=list)
-    session_goals: List[str] = Field(default_factory=list)
     
     # Metadata
     created_at: datetime = Field(default_factory=datetime.now)

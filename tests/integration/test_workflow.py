@@ -15,10 +15,14 @@ async def test_workflow_service_end_session_runs_agents():
     service = GraphWorkflowService()
 
     user_id = "test_user_workflow"
-    initial_state = await service.start_session(user_id, ["Test learning goals"])
+    # Create state directly (as the API does)
+    initial_state = GraphState(
+        user_id=user_id,
+        user_session=UserSession(user_id=user_id)
+    )
 
     # Simulate end of session, which should trigger the feedback -> planner -> words -> referee chain
-    final_state = await service.end_session(initial_state)
+    final_state = await service.trigger_feedback_loop(initial_state)
 
     assert final_state.last_feedback is not None
     assert final_state.last_plan is not None

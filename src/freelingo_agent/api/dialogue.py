@@ -46,10 +46,9 @@ async def save_dialogue_session(
         from freelingo_agent.models.user_session import UserSession
         state = GraphState(
             user_id=session.user_id,
-            user_session=UserSession(user_id=session.user_id),
-            session_goals=["Practice conversation", "Learn new vocabulary"]
+            user_session=UserSession(user_id=session.user_id)
         )
-        await workflow_service.end_session(state)
+        await workflow_service.trigger_feedback_loop(state)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return DialogueSessionResponse(session_id=session_id, status="saved")
@@ -81,10 +80,9 @@ async def save_current_dialogue_session(
         from freelingo_agent.models.user_session import UserSession
         state = GraphState(
             user_id=user_id,
-            user_session=UserSession(user_id=user_id),
-            session_goals=["Practice conversation", "Learn new vocabulary"]
+            user_session=UserSession(user_id=user_id)
         )
-        await workflow_service.end_session(state)
+        await workflow_service.trigger_feedback_loop(state)
         
         return DialogueSessionResponse(session_id=session_id, status="saved")
     except Exception as e:

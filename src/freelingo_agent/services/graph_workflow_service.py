@@ -21,7 +21,6 @@ from freelingo_agent.services.llm_service import (
     suggest_new_words,
     referee_utterance,
 )
-from freelingo_agent.services.dialogue_service import run_dialogue_turn
 
 # Configure logging
 logfire.configure(send_to_logfire="if-token-present")
@@ -42,14 +41,13 @@ class GraphWorkflowService:
         workflow = StateGraph(GraphState)
         
         # Add nodes for each agent
-        workflow.add_node("DIALOGUE", self._dialogue_node)
         workflow.add_node("FEEDBACK", self._feedback_node)
         workflow.add_node("PLANNER", self._planner_node)
         workflow.add_node("NEW_WORDS", self._new_words_node)
         workflow.add_node("REFEREE", self._referee_node)
         
         # Set entry point
-        workflow.set_entry_point("DIALOGUE")
+        workflow.set_entry_point("FEEDBACK")
         
         # Add edges for the session end flow
         workflow.add_edge("FEEDBACK", "PLANNER")
@@ -68,25 +66,8 @@ class GraphWorkflowService:
             }
         )
         
-        # Add edge from DIALOGUE to END (user can end session)
-        workflow.add_edge("DIALOGUE", END)
         
         return workflow
-    
-    async def _dialogue_node(self, state: GraphState) -> GraphState:
-        """Handle dialogue interactions - uses existing UserSession"""
-        logger.info(f"Dialogue node activated for user {state.user_id}")
-        
-        # Update state
-        state.current_agent = "DIALOGUE"
-        state.updated_at = datetime.now()
-        
-        # Get existing user session (don't create new one)
-        existing_session = get_session(state.user_id)
-        if existing_session:
-            state.user_session = existing_session
-        
-        return state
     
     async def _feedback_node(self, state: GraphState) -> GraphState:
         """Generate feedback after dialogue session ends - uses existing session data"""
@@ -337,55 +318,15 @@ class GraphWorkflowService:
         context = f"""
         User ID: {state.user_id}
         Known Words: {', '.join(state.user_session.known_words)}
-        Session Goals: {', '.join(state.session_goals)}
         Feedback: {state.last_feedback.strengths if state.last_feedback else 'None'}
         Plan: {state.last_plan.session_objectives if state.last_plan else 'None'}
         New Words: {state.last_words.new_words if state.last_words else 'None'}
         """
         return context
     
-    async def start_session(self, user_id: str, session_goals: List[str] = None) -> GraphState:
-        """Start a new learning session using existing UserSession"""
-        logger.info(f"Starting new session for user {user_id}")
-        
-        # Get existing user session (don't create new one)
-        user_session = get_session(user_id)
-        if not user_session:
-            # Create minimal session if none exists
-            user_session = UserSession(user_id=user_id)
-        
-        # Create initial state using existing session
-        initial_state = GraphState(
-            user_id=user_id,
-            user_session=user_session,
-            session_goals=session_goals or ["Practice conversation", "Learn new vocabulary"],
-            current_agent="DIALOGUE"
-        )
-        
-        return initial_state
-    
-    async def process_dialogue(self, state: GraphState, user_message: str) -> Dict[str, Any]:
-        """Process a user message in dialogue mode - integrates with existing system"""
-        logger.info(f"Processing dialogue for user {state.user_id}")
-        
-        # Use the dialogue service to run a real turn and update session
-        ai_message = ""
-        full_response: Dict[str, Any] = {}
-        try:
-            ai_message, full_response = await run_dialogue_turn(
-                user_id=state.user_id,
-                student_response=user_message,
-            )
-        except Exception as e:
-            logger.warning(f"run_dialogue_turn failed, using fallback response: {e}")
-            ai_message = "Bonjour ! Comment allez-vous aujourd'hui ?"
-            full_response = {"ai_reply": {"text": ai_message}}
-
-        return {"message": ai_message, "agent_response": full_response}
-    
-    async def end_session(self, state: GraphState) -> GraphState:
-        """End the current dialogue session and start the feedback flow"""
-        logger.info(f"Ending session for user {state.user_id}")
+    async def trigger_feedback_loop(self, state: GraphState) -> GraphState:
+        """Trigger the post-session learning workflow: feedback → planner → words → referee"""
+        logger.info(f"Triggering feedback loop for user {state.user_id}")
         
         # Transition to feedback flow
         state.current_agent = "FEEDBACK"
@@ -417,6 +358,9 @@ class GraphWorkflowService:
         
         try:
             result = await self.app.ainvoke(state)
+            # Convert dict result back to GraphState if needed
+            if isinstance(result, dict):
+                return GraphState(**result)
             return result
         except Exception as e:
             logger.error(f"Error running workflow: {e}")
