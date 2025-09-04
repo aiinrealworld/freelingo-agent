@@ -1,6 +1,7 @@
 fastapi
 supabase
 pydantic-ai
+langgraph
 logfire
 python-jose
 google-cloud-speech

@@ -194,6 +194,8 @@ httpx[http2]==0.28.1
     #   google-genai
     #   gotrue
     #   groq
+    #   langgraph-sdk
+    #   langsmith
     #   mcp
     #   mistralai
     #   openai
@@ -235,10 +237,31 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
+jsonpatch==1.33
+    # via langchain-core
+jsonpointer==3.0.0
+    # via jsonpatch
 jsonschema==4.24.0
     # via altair
 jsonschema-specifications==2025.4.1
     # via jsonschema
+langchain-core==0.3.75
+    # via
+    #   langgraph
+    #   langgraph-checkpoint
+    #   langgraph-prebuilt
+langgraph==0.6.6
+    # via -r requirements.in
+langgraph-checkpoint==2.1.1
+    # via
+    #   langgraph
+    #   langgraph-prebuilt
+langgraph-prebuilt==0.6.4
+    # via langgraph
+langgraph-sdk==0.2.5
+    # via langgraph
+langsmith==0.4.23
+    # via langchain-core
 logfire==3.17.0
     # via -r requirements.in
 logfire-api==3.17.0
@@ -298,12 +321,20 @@ opentelemetry-semantic-conventions==0.54b1
     # via
     #   opentelemetry-instrumentation
     #   opentelemetry-sdk
+orjson==3.11.3
+    # via
+    #   langgraph-sdk
+    #   langsmith
+ormsgpack==1.10.0
+    # via langgraph-checkpoint
 packaging==25.0
     # via
     #   altair
     #   black
     #   deprecation
     #   huggingface-hub
+    #   langchain-core
+    #   langsmith
     #   opentelemetry-instrumentation
     #   pytest
     #   streamlit
@@ -361,6 +392,9 @@ pydantic==2.11.5
     #   google-genai
     #   gotrue
     #   groq
+    #   langchain-core
+    #   langgraph
+    #   langsmith
     #   mcp
     #   mistralai
     #   openai
@@ -423,6 +457,7 @@ pytz==2025.2
 pyyaml==6.0.2
     # via
     #   huggingface-hub
+    #   langchain-core
     #   pydantic-evals
 realtime==2.4.3
     # via supabase
@@ -438,9 +473,13 @@ requests==2.32.3
     #   google-cloud-storage
     #   google-genai
     #   huggingface-hub
+    #   langsmith
     #   opentelemetry-exporter-otlp-proto-http
     #   pydantic-ai-slim
+    #   requests-toolbelt
     #   streamlit
+requests-toolbelt==1.0.0
+    # via langsmith
 rich==14.0.0
     # via
     #   logfire
@@ -492,7 +531,9 @@ supabase==2.15.2
 supafunc==0.9.4
     # via supabase
 tenacity==9.1.2
-    # via streamlit
+    # via
+    #   langchain-core
+    #   streamlit
 tokenizers==0.21.1
     # via cohere
 toml==0.10.2
@@ -515,6 +556,7 @@ typing-extensions==4.14.0
     #   google-genai
     #   groq
     #   huggingface-hub
+    #   langchain-core
     #   logfire
     #   openai
     #   opentelemetry-sdk
@@ -554,7 +596,11 @@ wrapt==1.17.2
     # via
     #   deprecated
     #   opentelemetry-instrumentation
+xxhash==3.5.0
+    # via langgraph
 yarl==1.20.0
     # via aiohttp
 zipp==3.22.0
     # via importlib-metadata
+zstandard==0.24.0
+    # via langsmith

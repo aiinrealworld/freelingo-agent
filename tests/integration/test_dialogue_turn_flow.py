@@ -2,11 +2,11 @@ import pytest
 from typing import List
 from pydantic_ai.messages import ModelRequest, ModelResponse, UserPromptPart, SystemPromptPart, TextPart
 
-from services.user_session_service import (
+from freelingo_agent.services.user_session_service import (
     get_session,
     get_dialogue_history_from_session,
 )
-from services.dialogue_service import run_dialogue_turn
+from freelingo_agent.services.dialogue_service import run_dialogue_turn
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -40,11 +40,11 @@ async def test_run_dialogue_turn_fetches_known_words_and_returns_ai_response():
 
 
 from pydantic_ai.messages import ModelMessage
-from services.user_session_service import (
+from freelingo_agent.services.user_session_service import (
     get_session,
     get_dialogue_history_from_session
 )
-from services.llm_service import get_dialogue_response
+from freelingo_agent.services.llm_service import get_dialogue_response
 
 @pytest.mark.integration
 @pytest.mark.asyncio
