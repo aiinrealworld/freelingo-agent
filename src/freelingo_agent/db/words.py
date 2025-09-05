@@ -1,6 +1,6 @@
 from supabase import Client
 from typing import List, Optional
-from freelingo_agent.models.words_model import WordResponse, WordCreate, WordUpdate
+from freelingo_agent.models.words_model import Word
 from freelingo_agent.db.supabase import supabase
 import uuid
 from datetime import datetime
@@ -10,13 +10,13 @@ def get_known_words(user_id: str) -> List[str]:
     response = supabase.table("words").select("word").eq("user_id", user_id).order("created_at", desc=True).execute()
     return [row["word"] for row in response.data]
 
-def get_user_words(user_id: str) -> List[WordResponse]:
+def get_user_words(user_id: str) -> List[Word]:
     """Get all words for a user with full details"""
     response = supabase.table("words").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
     
     words = []
     for row in response.data:
-        words.append(WordResponse(
+        words.append(Word(
             id=row["id"],
             user_id=row["user_id"],
             word=row["word"],
@@ -29,7 +29,7 @@ def get_user_words(user_id: str) -> List[WordResponse]:
 
 
 
-def create_word(user_id: str, word_data: WordCreate) -> WordResponse:
+def create_word(user_id: str, word_data: Word) -> Word:
     """Create a new word with full details"""
     db_data = {
         "user_id": user_id,
@@ -41,7 +41,7 @@ def create_word(user_id: str, word_data: WordCreate) -> WordResponse:
     response = supabase.table("words").insert(db_data).execute()
     row = response.data[0]
     
-    return WordResponse(
+    return Word(
         id=row["id"],
         user_id=row["user_id"],
         word=row["word"],
@@ -50,7 +50,7 @@ def create_word(user_id: str, word_data: WordCreate) -> WordResponse:
         created_at=datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
     )
 
-def update_word(word_id: str, updates: WordUpdate) -> Optional[WordResponse]:
+def update_word(word_id: str, updates: Word) -> Optional[Word]:
     """Update a word"""
     update_data = {}
     if updates.word is not None:
@@ -69,7 +69,7 @@ def update_word(word_id: str, updates: WordUpdate) -> Optional[WordResponse]:
         return None
     
     row = response.data[0]
-    return WordResponse(
+    return Word(
         id=row["id"],
         user_id=row["user_id"],
         word=row["word"],

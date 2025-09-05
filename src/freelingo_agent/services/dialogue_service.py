@@ -1,6 +1,6 @@
 from freelingo_agent.services.user_session_service import (
     get_session, update_dialogue_turn_in_session, 
-    store_agent_response_in_session
+    store_agent_response_in_session, get_dialogue_history_from_session
 )
 from freelingo_agent.services.words_service import fetch_known_words
 from freelingo_agent.services.llm_service import get_dialogue_response

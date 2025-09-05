@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
 from datetime import datetime
-from freelingo_agent.models.words_model import WordCreate, WordResponse, WordUpdate, DialogueMessage, DialogueResponse
+from freelingo_agent.models.words_model import Word, DialogueMessage, DialogueResponse
 from freelingo_agent.models.user import User
 from freelingo_agent.services.auth_service import get_current_user
 from freelingo_agent.services.words_service import suggest_new_words_for_user
@@ -19,7 +19,7 @@ async def health_check():
 
 
 
-@router.get("/words/{user_id}", response_model=List[WordResponse])
+@router.get("/words/{user_id}", response_model=List[Word])
 async def get_user_words_endpoint(user_id: str, current_user: User = Depends(get_current_user)):
     """Get all words for a user"""
     # Verify the user is requesting their own data
@@ -32,8 +32,8 @@ async def get_user_words_endpoint(user_id: str, current_user: User = Depends(get
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch words: {str(e)}")
 
-@router.post("/words", response_model=WordResponse)
-async def create_word_endpoint(word: WordCreate, current_user: User = Depends(get_current_user)):
+@router.post("/words", response_model=Word)
+async def create_word_endpoint(word: Word, current_user: User = Depends(get_current_user)):
     """Add a new word for a user"""
     # Verify the user is creating words for themselves
     if current_user.user_id != word.user_id:
@@ -45,8 +45,8 @@ async def create_word_endpoint(word: WordCreate, current_user: User = Depends(ge
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create word: {str(e)}")
 
-@router.put("/words/{word_id}", response_model=WordResponse)
-async def update_word_endpoint(word_id: str, updates: WordUpdate, current_user: User = Depends(get_current_user)):
+@router.put("/words/{word_id}", response_model=Word)
+async def update_word_endpoint(word_id: str, updates: Word, current_user: User = Depends(get_current_user)):
     """Update a word"""
     try:
         updated_word = update_word(word_id, updates)
@@ -86,7 +86,7 @@ async def delete_word_endpoint(word_id: str, current_user: User = Depends(get_cu
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete word: {str(e)}")
 
-@router.get("/new-words/{user_id}", response_model=List[WordResponse])
+@router.get("/new-words/{user_id}", response_model=List[Word])
 async def get_new_words_endpoint(user_id: str, current_user: User = Depends(get_current_user)):
     """Get all new words for a user using suggest_new_words_for_user"""
     if current_user.user_id != user_id:
@@ -96,14 +96,14 @@ async def get_new_words_endpoint(user_id: str, current_user: User = Depends(get_
         word_suggestion = await suggest_new_words_for_user(user_id)
         
         if word_suggestion and hasattr(word_suggestion, "new_words"):
-            # Convert WordSuggestion to WordResponse objects
+            # Convert WordSuggestion to Word objects
             new_word_objs = []
             for word in word_suggestion.new_words:
                 usage = word_suggestion.usages.get(word)
                 if usage:
-                    # Create WordResponse object from the suggestion data
+                    # Create Word object from the suggestion data
                     # Note: These are suggested words, not yet in known_words table
-                    word_response = WordResponse(
+                    word_response = Word(
                         id=f"new_{word}",  # Generate a temporary ID for new words
                         user_id=user_id,
                         word=word,

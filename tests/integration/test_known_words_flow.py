@@ -28,7 +28,11 @@ async def test_known_words_llm_integration():
 
         # Step 2: Run the agent (mock the LLM call)
         with patch('freelingo_agent.services.llm_service.words_agent') as mock_agent:
-            mock_agent.run.return_value.output = '{"new_words": ["manger", "jouer", "jardin"], "usages": {"manger": {"fr": "Je mange une pomme.", "en": "I eat an apple."}, "jouer": {"fr": "Le chat veut jouer.", "en": "The cat wants to play."}, "jardin": {"fr": "Je suis dans le jardin.", "en": "I am in the garden."}}}'
+            mock_result = Mock()
+            mock_result.output = '{"new_words": ["manger", "jouer", "jardin"], "usages": {"manger": {"fr": "Je mange une pomme.", "en": "I eat an apple."}, "jouer": {"fr": "Le chat veut jouer.", "en": "The cat wants to play."}, "jardin": {"fr": "Je suis dans le jardin.", "en": "I am in the garden."}}}'
+            async def mock_run(*args, **kwargs):
+                return mock_result
+            mock_agent.run = mock_run
             
             result: WordSuggestion = await suggest_new_words(known_words)
 

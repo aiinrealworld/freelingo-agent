@@ -2,7 +2,7 @@ import os
 import json
 from typing import List, Dict, Any, Optional, Tuple
 from openai import AsyncOpenAI
-from freelingo_agent.models.words_model import WordSuggestion
+from freelingo_agent.models.words_model import WordSuggestion, Word
 from freelingo_agent.models.feedback_model import FeedbackAgentOutput
 from freelingo_agent.models.planner_model import PlannerAgentOutput
 from freelingo_agent.models.referee_model import RefereeAgentOutput
@@ -16,12 +16,12 @@ from freelingo_agent.agents.planner_agent import planner_agent
 from freelingo_agent.agents.referee_agent import referee_agent
 from pydantic_ai.messages import ModelMessage, UserPromptPart, ModelResponse, TextPart
 
-async def suggest_new_words(known_words: List[str]) -> WordSuggestion:
+async def suggest_new_words(known_words: List[Word]) -> WordSuggestion:
     """
     Calls the words_agent to suggest 3 new words that pair well with known words.
 
     Args:
-        known_words (List[str]): The user's known French words.
+        known_words (List[Word]): The user's known French words.
 
     Returns:
         WordSuggestion: new words + example sentences
@@ -29,7 +29,7 @@ async def suggest_new_words(known_words: List[str]) -> WordSuggestion:
 
     try:
         result = await words_agent.run(
-            user_prompt = f"List of known words: {known_words}"
+            # Extract just the word strings for the agentn            word_strings = [word.word for word in known_words]n            user_prompt = f"List of known words: {word_strings}"
         )
         parsed_output = json.loads(result.output)
         print(parsed_output)
@@ -42,7 +42,7 @@ async def suggest_new_words(known_words: List[str]) -> WordSuggestion:
 
 async def get_dialogue_response(
     user_id: str,
-    known_words: List[str],
+    known_words: List[Word],
     student_response: str,
     dialogue_history: List[ModelMessage],
 ) -> Tuple[str, List[ModelMessage], Dict[str, Any]]:
@@ -50,7 +50,7 @@ async def get_dialogue_response(
     Calls the dialogue_agent to generate the next AI message in French.
 
     Args:
-        known_words (List[str]): Words the user already knows.
+        known_words (List[Word]): Words the user already knows.
         dialogue_history (List[ModelMessage]): List of previous ModelMessage objects.
 
     Returns:
@@ -64,8 +64,10 @@ async def get_dialogue_response(
         dialogue_agent = session.dialogue_agent
 
         if dialogue_agent is None:
+            # Extract just the word strings for the agent
+            word_strings = [word.word for word in known_words]
             updated_dialogue_agent_prompt = DIALOGUE_AGENT_PROMPT.format(
-                known_words=json.dumps(known_words, ensure_ascii=False)
+                known_words=json.dumps(word_strings, ensure_ascii=False)
             )
             print("[DEBUG] Dialogue Agent System Prompt:")
             print(updated_dialogue_agent_prompt)
@@ -113,7 +115,7 @@ def extract_full_agent_response(result_output) -> Dict[str, Any]:
 
 async def get_feedback(
     transcript: Transcript,
-    known_words: List[str],
+    known_words: List[Word],
     new_words: Optional[WordSuggestion] = None,
 ) -> FeedbackAgentOutput:
     """
@@ -127,7 +129,7 @@ async def get_feedback(
 
         # Build INPUT block as per few-shots
         parts = []
-        parts.append(f"known_words: {json.dumps(known_words, ensure_ascii=False)}")
+        # Extract just the word strings for the agentn        word_strings = [word.word for word in known_words]n        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
         if new_words and new_words.new_words:
             parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
         parts.append("Transcript:")
@@ -143,7 +145,7 @@ async def get_feedback(
 
 
 async def get_plan(
-    known_words: List[str],
+    known_words: List[Word],
     new_words: Optional[WordSuggestion] = None,
     transcript: Optional[Transcript] = None,
 ) -> PlannerAgentOutput:
@@ -155,7 +157,7 @@ async def get_plan(
     try:
         # Build INPUT block as per few-shots
         parts = []
-        parts.append(f"known_words: {json.dumps(known_words, ensure_ascii=False)}")
+        # Extract just the word strings for the agentn        word_strings = [word.word for word in known_words]n        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
         if new_words and new_words.new_words:
             parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
         if transcript and transcript.transcript:
@@ -174,7 +176,7 @@ async def get_plan(
 
 async def referee_utterance(
     learner_utterance: str,
-    known_words: List[str],
+    known_words: List[Word],
     new_words: Optional[WordSuggestion] = None,
 ) -> RefereeAgentOutput:
     """
@@ -185,7 +187,7 @@ async def referee_utterance(
     try:
         # Build INPUT block as per few-shots
         parts = []
-        parts.append(f"known_words: {json.dumps(known_words, ensure_ascii=False)}")
+        # Extract just the word strings for the agentn        word_strings = [word.word for word in known_words]n        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
         if new_words and new_words.new_words:
             parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
         parts.append(f"Learner utterance: \"{learner_utterance}\"")

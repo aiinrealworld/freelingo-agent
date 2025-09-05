@@ -1,0 +1,124 @@
+{
+  "transcript": [
+    {
+      "ai_turn": {
+        "rationale": {
+          "reasoning_summary": "Starting with a simple greeting to establish rapport and test basic vocabulary",
+          "vocabulary_challenge": {
+            "description": "Basic greeting vocabulary with simple question",
+            "tags": ["short_vocab"]
+          },
+          "rule_checks": {
+            "used_only_allowed_vocabulary": true,
+            "one_sentence": false,
+            "max_eight_words": false,
+            "no_corrections_or_translations": true
+          }
+        },
+        "ai_reply": {
+          "text": "Bonjour ! Comment allez-vous aujourd'hui ?",
+          "word_count": 6
+        }
+      },
+      "user_turn": {
+        "text": "Bonjour"
+      }
+    },
+    {
+      "ai_turn": {
+        "rationale": {
+          "reasoning_summary": "Responding to greeting and asking about their day to continue conversation",
+          "vocabulary_challenge": {
+            "description": "Simple response with basic vocabulary about daily activities",
+            "tags": ["short_vocab"]
+          },
+          "rule_checks": {
+            "used_only_allowed_vocabulary": true,
+            "one_sentence": false,
+            "max_eight_words": false,
+            "no_corrections_or_translations": true
+          }
+        },
+        "ai_reply": {
+          "text": "Très bien, merci ! Que faites-vous aujourd'hui ?",
+          "word_count": 6
+        }
+      },
+      "user_turn": {
+        "text": "Je vais bien, merci. Et vous ?"
+      }
+    },
+    {
+      "ai_turn": {
+        "rationale": {
+          "reasoning_summary": "Acknowledging their response and asking about current activity to introduce food vocabulary",
+          "vocabulary_challenge": {
+            "description": "Food-related vocabulary with simple present tense",
+            "tags": ["short_vocab"]
+          },
+          "rule_checks": {
+            "used_only_allowed_vocabulary": true,
+            "one_sentence": false,
+            "max_eight_words": false,
+            "no_corrections_or_translations": true
+          }
+        },
+        "ai_reply": {
+          "text": "Excellente ! Les pommes sont délicieuses. Aimez-vous les pommes ?",
+          "word_count": 8
+        }
+      },
+      "user_turn": {
+        "text": "Je mange une pomme"
+      }
+    },
+    {
+      "ai_turn": {
+        "rationale": {
+          "reasoning_summary": "Building on food topic and asking about preferences to practice like/dislike expressions",
+          "vocabulary_challenge": {
+            "description": "Preference vocabulary with simple questions",
+            "tags": ["short_vocab"]
+          },
+          "rule_checks": {
+            "used_only_allowed_vocabulary": true,
+            "one_sentence": false,
+            "max_eight_words": false,
+            "no_corrections_or_translations": true
+          }
+        },
+        "ai_reply": {
+          "text": "Moi aussi ! Que buvez-vous avec votre pomme ?",
+          "word_count": 8
+        }
+      },
+      "user_turn": {
+        "text": "Oui, j'aime les pommes. Et vous ?"
+      }
+    },
+    {
+      "ai_turn": {
+        "rationale": {
+          "reasoning_summary": "Expanding to drinks vocabulary and health topic to broaden conversation",
+          "vocabulary_challenge": {
+            "description": "Drink vocabulary with health-related content",
+            "tags": ["short_vocab"]
+          },
+          "rule_checks": {
+            "used_only_allowed_vocabulary": true,
+            "one_sentence": false,
+            "max_eight_words": false,
+            "no_corrections_or_translations": true
+          }
+        },
+        "ai_reply": {
+          "text": "Parfait ! L'eau est très bonne pour la santé. Avez-vous d'autres questions ?",
+          "word_count": 10
+        }
+      },
+      "user_turn": {
+        "text": "Je bois de l'eau"
+      }
+    }
+  ]
+}

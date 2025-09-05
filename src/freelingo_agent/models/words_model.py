@@ -10,22 +10,14 @@ class WordSuggestion(BaseModel):
     new_words: List[str]
     usages: Dict[str, UsageExample]  # word -> usage object
 
-# New models for React UI compatibility
-class WordCreate(BaseModel):
+# Single Word model for all operations
+class Word(BaseModel):
+    id: Optional[str] = None
+    user_id: str
     word: str
     translation: str
     example: Optional[str] = None
-    user_id: str
-
-class WordResponse(WordCreate):
-    id: str
-    user_id: str
-    created_at: datetime
-
-class WordUpdate(BaseModel):
-    word: Optional[str] = None
-    translation: Optional[str] = None
-    example: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 class DialogueMessage(BaseModel):
     message: str
