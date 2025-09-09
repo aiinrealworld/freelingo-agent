@@ -19,7 +19,7 @@ from freelingo_agent.services.llm_service import (
     get_feedback,
     get_plan,
     suggest_new_words,
-    referee_utterance,
+    validate_agent_chain,
 )
 from freelingo_agent.services.dialogue_session_service import construct_transcript_from_dialogue_history
 
@@ -217,12 +217,12 @@ class GraphWorkflowService:
             known_words = state.user_session.known_words or []
             new_words = state.last_words
             try:
-                state.last_referee_decision = await referee_utterance(
+                state.last_referee_decision = await validate_agent_chain(
                     transcript=transcript,
                     known_words=known_words,
-                    new_words=new_words,
                     feedback=state.last_feedback,
                     plan=state.last_plan,
+                    new_words=new_words,
                 )
             except Exception as agent_err:
                 logger.warning(f"referee_agent failed, using conservative fallback: {agent_err}")

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime
 
@@ -7,7 +7,7 @@ class UsageExample(BaseModel):
     en: str  # English translation of the sentence
 
 class WordSuggestion(BaseModel):
-    new_words: List[str]
+    new_words: List[str] = Field(max_length=8, description="List of suggested new vocabulary words in French")
     usages: Dict[str, UsageExample]  # word -> usage object
 
 # Single Word model for all operations

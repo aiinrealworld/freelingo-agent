@@ -17,6 +17,6 @@ def fetch_known_words(user_id: str) -> List[Word]:
 
 
 async def suggest_new_words_for_user(user_id: str) -> WordSuggestion:
-    known_words = fetch_known_words(user_id)
+    known_words = get_user_words(user_id)  # Use get_user_words to get Word objects
     new_words = await suggest_new_words(known_words)
     return new_words

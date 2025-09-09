@@ -22,7 +22,7 @@ class TestGraphWorkflowTranscript:
     @pytest.fixture
     def test_transcript(self):
         """Load the test transcript from JSON file."""
-        transcript_path = Path(__file__).parent.parent.parent / "test_transcript_10_turns.json"
+        transcript_path = Path(__file__).parent.parent / "fixtures" / "transcript_10_turns.json"
         with open(transcript_path, 'r', encoding='utf-8') as f:
             transcript_data = json.load(f)
         return Transcript(**transcript_data)
@@ -35,7 +35,7 @@ class TestGraphWorkflowTranscript:
     @pytest.fixture
     def test_known_words(self):
         """Load the test known words from JSON file."""
-        known_words_path = Path(__file__).parent.parent.parent / "test_known_words.json"
+        known_words_path = Path(__file__).parent.parent / "fixtures" / "known_words.json"
         with open(known_words_path, 'r', encoding='utf-8') as f:
             known_words_data = json.load(f)
         return [Word(**word_data) for word_data in known_words_data["known_words"]]
