@@ -11,6 +11,7 @@ from pathlib import Path
 from freelingo_agent.models.transcript_model import Transcript
 from freelingo_agent.models.graph_state import GraphState
 from freelingo_agent.models.user_session import UserSession
+from freelingo_agent.models.words_model import Word
 from freelingo_agent.services.graph_workflow_service import GraphWorkflowService
 # Note: GraphWorkflowService is self-contained and doesn't need external dependencies
 
@@ -32,15 +33,24 @@ class TestGraphWorkflowTranscript:
         return GraphWorkflowService()
     
     @pytest.fixture
-    def test_user_session(self):
-        """Create a test user session."""
+    def test_known_words(self):
+        """Load the test known words from JSON file."""
+        known_words_path = Path(__file__).parent.parent.parent / "test_known_words.json"
+        with open(known_words_path, 'r', encoding='utf-8') as f:
+            known_words_data = json.load(f)
+        return [Word(**word_data) for word_data in known_words_data["known_words"]]
+    
+    @pytest.fixture
+    def test_user_session(self, test_known_words):
+        """Create a test user session with known words."""
         return UserSession(
             user_id="test_user_001",
             session_id="test_session_001",
             language="fr",
             proficiency_level="beginner",
             learning_goals=["basic_conversation"],
-            current_topic="greetings"
+            current_topic="greetings",
+            known_words=test_known_words
         )
     
     @pytest.mark.asyncio

@@ -1,0 +1,250 @@
+{
+  "known_words": [
+    {
+      "user_id": "test_user_001",
+      "word": "bonjour",
+      "translation": "hello",
+      "example": "Bonjour, comment allez-vous ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "comment",
+      "translation": "how",
+      "example": "Comment allez-vous ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "allez",
+      "translation": "go",
+      "example": "Comment allez-vous ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "vous",
+      "translation": "you (formal)",
+      "example": "Comment allez-vous ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "aujourd'hui",
+      "translation": "today",
+      "example": "Comment allez-vous aujourd'hui ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "très",
+      "translation": "very",
+      "example": "Très bien, merci !"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "bien",
+      "translation": "well/good",
+      "example": "Je vais bien, merci."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "merci",
+      "translation": "thank you",
+      "example": "Très bien, merci !"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "que",
+      "translation": "what",
+      "example": "Que faites-vous aujourd'hui ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "faites",
+      "translation": "do/make",
+      "example": "Que faites-vous aujourd'hui ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "je",
+      "translation": "I",
+      "example": "Je vais bien, merci."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "vais",
+      "translation": "go",
+      "example": "Je vais bien, merci."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "et",
+      "translation": "and",
+      "example": "Je vais bien, merci. Et vous ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "excellente",
+      "translation": "excellent",
+      "example": "Excellente ! Les pommes sont délicieuses."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "les",
+      "translation": "the (plural)",
+      "example": "Les pommes sont délicieuses."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "pommes",
+      "translation": "apples",
+      "example": "Les pommes sont délicieuses."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "sont",
+      "translation": "are",
+      "example": "Les pommes sont délicieuses."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "délicieuses",
+      "translation": "delicious",
+      "example": "Les pommes sont délicieuses."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "aimez",
+      "translation": "like/love",
+      "example": "Aimez-vous les pommes ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "mange",
+      "translation": "eat",
+      "example": "Je mange une pomme."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "une",
+      "translation": "a/an (feminine)",
+      "example": "Je mange une pomme."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "pomme",
+      "translation": "apple",
+      "example": "Je mange une pomme."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "moi",
+      "translation": "me",
+      "example": "Moi aussi !"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "aussi",
+      "translation": "also/too",
+      "example": "Moi aussi !"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "buvez",
+      "translation": "drink",
+      "example": "Que buvez-vous avec votre pomme ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "avec",
+      "translation": "with",
+      "example": "Que buvez-vous avec votre pomme ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "votre",
+      "translation": "your (formal)",
+      "example": "Que buvez-vous avec votre pomme ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "oui",
+      "translation": "yes",
+      "example": "Oui, j'aime les pommes."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "j'aime",
+      "translation": "I like/love",
+      "example": "Oui, j'aime les pommes."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "parfait",
+      "translation": "perfect",
+      "example": "Parfait ! L'eau est très bonne pour la santé."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "l'eau",
+      "translation": "water",
+      "example": "Je bois de l'eau."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "est",
+      "translation": "is",
+      "example": "L'eau est très bonne pour la santé."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "bonne",
+      "translation": "good (feminine)",
+      "example": "L'eau est très bonne pour la santé."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "pour",
+      "translation": "for",
+      "example": "L'eau est très bonne pour la santé."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "la",
+      "translation": "the (feminine)",
+      "example": "L'eau est très bonne pour la santé."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "santé",
+      "translation": "health",
+      "example": "L'eau est très bonne pour la santé."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "avez",
+      "translation": "have",
+      "example": "Avez-vous d'autres questions ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "d'autres",
+      "translation": "other",
+      "example": "Avez-vous d'autres questions ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "questions",
+      "translation": "questions",
+      "example": "Avez-vous d'autres questions ?"
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "bois",
+      "translation": "drink",
+      "example": "Je bois de l'eau."
+    },
+    {
+      "user_id": "test_user_001",
+      "word": "de",
+      "translation": "of/from",
+      "example": "Je bois de l'eau."
+    }
+  ]
+}
