@@ -20,6 +20,7 @@ async def suggest_new_words(
     known_words: List[Word],
     plan: Optional[PlannerAgentOutput] = None,
     feedback: Optional[FeedbackAgentOutput] = None,
+    referee_feedback: Optional[List[RefereeAgentOutput]] = None,
 ) -> WordSuggestion:
     """
     Calls the words_agent to suggest 3 new words that pair well with known words.
@@ -46,13 +47,23 @@ async def suggest_new_words(
             feedback_json = json.dumps(feedback.model_dump(), indent=2, ensure_ascii=False)
             parts.append("Feedback:")
             parts.append(feedback_json)
+        
+        # Add referee feedback if this is a retry
+        if referee_feedback:
+            parts.append("Referee Feedback (from previous attempts):")
+            for i, feedback in enumerate(referee_feedback):
+                parts.append(f"Attempt {i+1}: {feedback.rationale.reasoning_summary}")
+                if feedback.violations:
+                    parts.append(f"  Violations: {', '.join(feedback.violations)}")
+            parts.append("Please address the referee's concerns in your word suggestions.")
+        
         parts.append("END")
         user_prompt = "\n".join(parts)
-        print(f"[DEBUG] NEW WORDS AGENT INPUT:\n{user_prompt}")
+        log_agent_input_structure("NEW WORDS AGENT", parts)
 
         result = await words_agent.run(user_prompt=user_prompt)
+        log_agent_output_pretty("NEW WORDS AGENT", result.output)
         parsed_output = json.loads(result.output)
-        print(parsed_output)
         
         return WordSuggestion(**parsed_output)
     
@@ -133,10 +144,70 @@ def extract_full_agent_response(result_output) -> Dict[str, Any]:
         return {"raw_response": str(result_output)}
 
 
+def truncate_transcript_for_logging(transcript_text: str, max_lines: int = 3) -> str:
+    """Truncate transcript text for cleaner logging output."""
+    lines = transcript_text.split('\n')
+    if len(lines) <= max_lines:
+        return transcript_text
+    
+    truncated_lines = lines[:max_lines]
+    truncated_text = '\n'.join(truncated_lines)
+    return f"{truncated_text}\n... (+{len(lines) - max_lines} more lines)"
+
+def log_agent_input_structure(agent_name: str, input_parts: List[str]) -> None:
+    """Log agent input structure without full content"""
+    print(f"[DEBUG] {agent_name} INPUT STRUCTURE:")
+    for part in input_parts:
+        if part.startswith("known_words:"):
+            print(f"  - known_words: [list of {len(json.loads(part.split(':', 1)[1].strip()))} words]")
+        elif part.startswith("new_words:"):
+            print(f"  - new_words: [list of {len(json.loads(part.split(':', 1)[1].strip()))} words]")
+        elif part.startswith("Transcript:"):
+            print(f"  - Transcript: [truncated transcript content]")
+        elif part.startswith("Feedback:"):
+            print(f"  - Feedback: [structured feedback object]")
+        elif part.startswith("Plan:"):
+            print(f"  - Plan: [structured plan object]")
+        elif part.startswith("Allowed words:"):
+            print(f"  - Allowed words: [list of {len(json.loads(part.split(':', 1)[1].strip()))} words]")
+        elif part.startswith("Session rules:"):
+            print(f"  - Session rules: [session constraints]")
+        elif part.startswith("Referee Feedback"):
+            print(f"  - Referee Feedback: [previous attempts feedback]")
+        elif part == "END":
+            print(f"  - END")
+        else:
+            print(f"  - {part[:50]}{'...' if len(part) > 50 else ''}")
+
+def log_agent_output_pretty(agent_name: str, output: Any) -> None:
+    """Log agent output in pretty JSON format"""
+    print(f"[DEBUG] {agent_name} OUTPUT:")
+    try:
+        if hasattr(output, 'model_dump'):
+            # Pydantic model
+            print(json.dumps(output.model_dump(), indent=2, ensure_ascii=False))
+        elif isinstance(output, dict):
+            # Dictionary
+            print(json.dumps(output, indent=2, ensure_ascii=False))
+        elif isinstance(output, str):
+            # Try to parse as JSON
+            try:
+                parsed = json.loads(output)
+                print(json.dumps(parsed, indent=2, ensure_ascii=False))
+            except json.JSONDecodeError:
+                print(output)
+        else:
+            print(output)
+    except Exception as e:
+        print(f"Error formatting output: {e}")
+        print(output)
+
+
 async def get_feedback(
     transcript: Transcript,
     known_words: List[Word],
     new_words: Optional[WordSuggestion] = None,
+    referee_feedback: Optional[List[RefereeAgentOutput]] = None,
 ) -> FeedbackAgentOutput:
     """
     Calls the feedback_agent with the provided transcript and vocabulary context.
@@ -149,19 +220,38 @@ async def get_feedback(
 
         # Build INPUT block as per few-shots
         parts = []
-        # Extract just the word strings for the agentn        word_strings = [word.word for word in known_words]n        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
+        # Extract just the word strings for the agent
+        word_strings = [word.word for word in known_words]
+        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
         if new_words and new_words.new_words:
             parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
         parts.append("Transcript:")
         parts.append(transcript_text)
+        
+        # Add referee feedback if this is a retry
+        if referee_feedback:
+            parts.append("Referee Feedback (from previous attempts):")
+            for i, feedback in enumerate(referee_feedback):
+                parts.append(f"Attempt {i+1}: {feedback.rationale.reasoning_summary}")
+                if feedback.violations:
+                    parts.append(f"  Violations: {', '.join(feedback.violations)}")
+            parts.append("Please address the referee's concerns in your feedback.")
+        
         parts.append("END")
         user_prompt = "\n".join(parts)
-        print(f"[DEBUG] FEEDBACK AGENT INPUT:\n{user_prompt}")
+        
+        log_agent_input_structure("FEEDBACK AGENT", parts)
 
         result = await feedback_agent.run(user_prompt=user_prompt)
-        print(f"[DEBUG] Raw feedback agent output: {result.output}")
-        parsed_output = json.loads(result.output)
-        return FeedbackAgentOutput(**parsed_output)
+        log_agent_output_pretty("FEEDBACK AGENT", result.output)
+        
+        # The agent now returns FeedbackAgentOutput directly
+        if isinstance(result.output, FeedbackAgentOutput):
+            return result.output
+        else:
+            # Fallback for string output (shouldn't happen with proper config)
+            parsed_output = json.loads(result.output)
+            return FeedbackAgentOutput(**parsed_output)
     except Exception as e:
         raise RuntimeError(f"feedback_agent failed: {e}")
 
@@ -170,6 +260,7 @@ async def get_plan(
     known_words: List[Word],
     feedback: Optional[FeedbackAgentOutput] = None,
     new_words: Optional[WordSuggestion] = None,
+    referee_feedback: Optional[List[RefereeAgentOutput]] = None,
 ) -> PlannerAgentOutput:
     """
     Calls the planner_agent to create a practice plan for the next session.
@@ -188,12 +279,22 @@ async def get_plan(
             feedback_json = json.dumps(feedback.model_dump(), indent=2, ensure_ascii=False)
             parts.append("Feedback:")
             parts.append(feedback_json)
+        
+        # Add referee feedback if this is a retry
+        if referee_feedback:
+            parts.append("Referee Feedback (from previous attempts):")
+            for i, feedback in enumerate(referee_feedback):
+                parts.append(f"Attempt {i+1}: {feedback.rationale.reasoning_summary}")
+                if feedback.violations:
+                    parts.append(f"  Violations: {', '.join(feedback.violations)}")
+            parts.append("Please address the referee's concerns in your plan.")
+        
         parts.append("END")
         user_prompt = "\n".join(parts)
-        print(f"[DEBUG] PLANNER AGENT INPUT:\n{user_prompt}")
+        log_agent_input_structure("PLANNER AGENT", parts)
 
         result = await planner_agent.run(user_prompt=user_prompt)
-        print(f"[DEBUG] Raw planner agent output: {result.output}")
+        log_agent_output_pretty("PLANNER AGENT", result.output)
         parsed_output = json.loads(result.output)
         return PlannerAgentOutput(**parsed_output)
     except Exception as e:
@@ -242,11 +343,18 @@ async def referee_utterance(
         
         parts.append("END")
         user_prompt = "\n".join(parts)
-        print(f"[DEBUG] REFEREE AGENT INPUT:\n{user_prompt}")
+        
+        log_agent_input_structure("REFEREE AGENT", parts)
 
         result = await referee_agent.run(user_prompt=user_prompt)
-        print(f"[DEBUG] Raw referee agent output: {result.output}")
-        parsed_output = json.loads(result.output)
-        return RefereeAgentOutput(**parsed_output)
+        log_agent_output_pretty("REFEREE AGENT", result.output)
+        
+        # The agent now returns RefereeAgentOutput directly
+        if isinstance(result.output, RefereeAgentOutput):
+            return result.output
+        else:
+            # Fallback for string output (shouldn't happen with correct config)
+            parsed_output = json.loads(result.output)
+            return RefereeAgentOutput(**parsed_output)
     except Exception as e:
         raise RuntimeError(f"referee_agent failed: {e}")

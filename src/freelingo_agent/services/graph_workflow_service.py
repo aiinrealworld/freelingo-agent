@@ -76,6 +76,7 @@ class GraphWorkflowService:
         
         state.current_agent = "FEEDBACK"
         state.updated_at = datetime.now()
+        state.state_transitions.append("FEEDBACK")
         
         try:
             # Use transcript from GraphState (constructed once at workflow start)
@@ -85,13 +86,19 @@ class GraphWorkflowService:
             known_words = state.user_session.known_words or []
             new_words = state.last_words
             try:
+                # Pass referee feedback history if this is a retry
+                referee_feedback = state.referee_feedback_history if state.referee_feedback_history else None
                 state.last_feedback = await get_feedback(
                     transcript=transcript,
                     known_words=known_words,
                     new_words=new_words,
+                    referee_feedback=referee_feedback,
                 )
             except Exception as agent_err:
                 logger.error(f"feedback_agent failed, using fallback: {agent_err}")
+                print(f"[ERROR] Feedback agent failed: {agent_err}")
+                import traceback
+                traceback.print_exc()
                 state.last_feedback = FeedbackAgentOutput(
                     strengths=[f"Completed session with {len(state.user_session.dialogue_history)} exchanges"],
                     issues=[],
@@ -116,6 +123,7 @@ class GraphWorkflowService:
         
         state.current_agent = "PLANNER"
         state.updated_at = datetime.now()
+        state.state_transitions.append("PLANNER")
         
         try:
             # Call planner agent; on failure, fall back to placeholder
@@ -124,27 +132,26 @@ class GraphWorkflowService:
             # Use transcript from GraphState (constructed once at workflow start)
             transcript = state.transcript
             try:
+                # Pass referee feedback history if this is a retry
+                referee_feedback = state.referee_feedback_history if state.referee_feedback_history else None
                 state.last_plan = await get_plan(
                     known_words=known_words,
                     feedback=state.last_feedback,
                     new_words=new_words,
+                    referee_feedback=referee_feedback,
                 )
             except Exception as agent_err:
                 logger.warning(f"planner_agent failed, using fallback: {agent_err}")
                 state.last_plan = PlannerAgentOutput(
                     session_objectives=["Expand vocabulary", "Practice conversation"],
-                    suggested_new_words=known_words[:3] if known_words else ["bonjour", "merci"],
                     practice_strategies=["Daily conversation practice"],
-                    conversation_prompts=["Tell me about your day"],
                 )
             
         except Exception as e:
             logger.error(f"Error in planner node: {e}")
             state.last_plan = PlannerAgentOutput(
                 session_objectives=["Continue learning"],
-                suggested_new_words=[],
-                practice_strategies=["Regular practice"],
-                conversation_prompts=[]
+                practice_strategies=["Regular practice"]
             )
         
         return state
@@ -155,15 +162,19 @@ class GraphWorkflowService:
         
         state.current_agent = "NEW_WORDS"
         state.updated_at = datetime.now()
+        state.state_transitions.append("NEW_WORDS")
         
         try:
             # Call words agent; on failure, fall back to placeholder
             known_words = state.user_session.known_words or []
             try:
+                # Pass referee feedback history if this is a retry
+                referee_feedback = state.referee_feedback_history if state.referee_feedback_history else None
                 state.last_words = await suggest_new_words(
                     known_words=known_words,
                     plan=state.last_plan,
                     feedback=state.last_feedback,
+                    referee_feedback=referee_feedback,
                 )
             except Exception as agent_err:
                 logger.warning(f"words_agent failed, using fallback: {agent_err}")
@@ -191,6 +202,12 @@ class GraphWorkflowService:
         
         state.current_agent = "REFEREE"
         state.updated_at = datetime.now()
+        state.state_transitions.append("REFEREE")
+        
+        # Print state transitions when reaching referee
+        transitions_str = " → ".join(state.state_transitions)
+        print(f"[REFEREE] State transitions: {transitions_str}")
+        logger.info(f"State transitions when reaching referee: {transitions_str}")
         
         try:
             # Use transcript from GraphState (constructed once at workflow start)
@@ -208,23 +225,26 @@ class GraphWorkflowService:
                     plan=state.last_plan,
                 )
             except Exception as agent_err:
-                logger.warning(f"referee_agent failed, using fallback: {agent_err}")
+                logger.warning(f"referee_agent failed, using conservative fallback: {agent_err}")
                 state.last_referee_decision = RefereeAgentOutput(
-                    is_valid=True,
-                    violations=[],
+                    is_valid=False,
+                    violations=["referee_agent_failed"],
                     rationale={
-                        "reasoning_summary": f"Session completed with {len(state.user_session.dialogue_history)} exchanges",
+                        "reasoning_summary": f"Referee agent failed to evaluate chain quality",
                         "rule_checks": {
-                            "used_only_allowed_vocabulary": True,
-                            "one_sentence": True,
-                            "max_eight_words": True,
-                            "no_corrections_or_translations": True,
+                            "feedback_transcript_alignment": False,
+                            "planner_feedback_incorporation": False,
+                            "new_words_plan_alignment": False,
+                            "overall_chain_coherence": False,
                         },
                     },
                 )
 
-            # Set next agent based on evaluation (simple policy for now)
-            state.next_agent = "END"
+            # Store referee decision in feedback history
+            state.referee_feedback_history.append(state.last_referee_decision)
+            
+            # Set next agent based on referee evaluation
+            state.next_agent = self._determine_next_agent_from_referee(state.last_referee_decision, state)
             
         except Exception as e:
             logger.error(f"Error in referee node: {e}")
@@ -241,16 +261,70 @@ class GraphWorkflowService:
                     }
                 }
             )
-            state.next_agent = "END"
+            # Store referee decision in feedback history
+            state.referee_feedback_history.append(state.last_referee_decision)
+            
+            state.next_agent = self._determine_next_agent_from_referee(state.last_referee_decision, state)
         
         return state
+    
+    def _determine_next_agent_from_referee(self, referee_decision: RefereeAgentOutput, state: GraphState) -> str:
+        """Determine next agent based on referee evaluation with circuit breaker"""
+        if not referee_decision or not referee_decision.is_valid:
+            # If invalid, check violations to determine where to route
+            violations = referee_decision.violations if referee_decision else []
+            
+            # Determine target agent based on violations
+            target_agent = None
+            if "feedback_misaligned_with_transcript" in violations:
+                target_agent = "FEEDBACK"
+            elif "planner_ignored_feedback" in violations:
+                target_agent = "PLANNER"
+            elif "new_words_off_topic" in violations:
+                target_agent = "NEW_WORDS"
+            elif "chain_incoherent" in violations:
+                target_agent = "FEEDBACK"  # Start over
+            else:
+                # Default to feedback for any other issues
+                target_agent = "FEEDBACK"
+            
+            # Check retry count for circuit breaker
+            retry_count = state.agent_retry_count.get(target_agent, 0)
+            if retry_count >= state.max_retries:
+                logger.warning(f"Circuit breaker triggered: {target_agent} has been retried {retry_count} times. Ending workflow.")
+                return "END"
+            
+            return target_agent
+        else:
+            # Chain is valid, end the workflow
+            return "END"
     
     def _referee_router(self, state: GraphState) -> str:
         """Route to next agent based on referee decision"""
         if not state.next_agent or state.next_agent == "END":
             return "END"
-        return state.next_agent
+        
+        # Check if we've been to referee 5 times - circuit breaker
+        referee_count = state.state_transitions.count("REFEREE")
+        if referee_count >= 5:
+            logger.warning(f"Circuit breaker triggered: Referee has been called {referee_count} times. Ending workflow.")
+            return "END"
+        
+        # Increment retry count for the target agent
+        target_agent = state.next_agent
+        state.agent_retry_count[target_agent] = state.agent_retry_count.get(target_agent, 0) + 1
+        
+        logger.info(f"Routing to {target_agent} (retry #{state.agent_retry_count[target_agent]})")
+        self._log_state_transitions(state)
+        return target_agent
     
+    def _log_state_transitions(self, state: GraphState) -> None:
+        """Log the current state transition history"""
+        if state.state_transitions:
+            transitions_str = " → ".join(state.state_transitions)
+            logger.info(f"State transitions: {transitions_str}")
+        else:
+            logger.info("No state transitions recorded yet")
     
     async def trigger_feedback_loop(self, state: GraphState) -> GraphState:
         """Trigger the post-session learning workflow: feedback → planner → words → referee"""
@@ -288,8 +362,13 @@ class GraphWorkflowService:
             result = await self.app.ainvoke(state)
             # Convert dict result back to GraphState if needed
             if isinstance(result, dict):
-                return GraphState(**result)
-            return result
+                final_state = GraphState(**result)
+            else:
+                final_state = result
+            
+            # Log final state transitions
+            self._log_state_transitions(final_state)
+            return final_state
         except Exception as e:
             logger.error(f"Error running workflow: {e}")
             return state

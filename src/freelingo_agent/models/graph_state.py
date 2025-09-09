@@ -32,9 +32,19 @@ class GraphState(BaseModel):
     last_words: Optional[WordSuggestion] = None
     last_referee_decision: Optional[RefereeAgentOutput] = None
     
+    # Referee feedback history for learning
+    referee_feedback_history: List[RefereeAgentOutput] = Field(default_factory=list)
+    
     # Workflow control
     should_continue: bool = True
     next_agent: Optional[Literal["PLANNER", "NEW_WORDS", "FEEDBACK", "END"]] = None
+    
+    # Retry tracking to prevent infinite loops
+    agent_retry_count: Dict[str, int] = Field(default_factory=dict)
+    max_retries: int = 3
+    
+    # State transition tracking
+    state_transitions: List[Literal["FEEDBACK", "PLANNER", "NEW_WORDS", "REFEREE", "END"]] = Field(default_factory=list)
     
     # Context for agents (derived from existing session data)
     conversation_context: str = ""
