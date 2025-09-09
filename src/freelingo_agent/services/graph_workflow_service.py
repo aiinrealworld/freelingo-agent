@@ -91,7 +91,7 @@ class GraphWorkflowService:
                     new_words=new_words,
                 )
             except Exception as agent_err:
-                logger.warning(f"feedback_agent failed, using fallback: {agent_err}")
+                logger.error(f"feedback_agent failed, using fallback: {agent_err}")
                 state.last_feedback = FeedbackAgentOutput(
                     strengths=[f"Completed session with {len(state.user_session.dialogue_history)} exchanges"],
                     issues=[],
@@ -126,8 +126,8 @@ class GraphWorkflowService:
             try:
                 state.last_plan = await get_plan(
                     known_words=known_words,
+                    feedback=state.last_feedback,
                     new_words=new_words,
-                    transcript=transcript,
                 )
             except Exception as agent_err:
                 logger.warning(f"planner_agent failed, using fallback: {agent_err}")
@@ -160,7 +160,11 @@ class GraphWorkflowService:
             # Call words agent; on failure, fall back to placeholder
             known_words = state.user_session.known_words or []
             try:
-                state.last_words = await suggest_new_words(known_words)
+                state.last_words = await suggest_new_words(
+                    known_words=known_words,
+                    plan=state.last_plan,
+                    feedback=state.last_feedback,
+                )
             except Exception as agent_err:
                 logger.warning(f"words_agent failed, using fallback: {agent_err}")
                 state.last_words = WordSuggestion(
@@ -189,26 +193,19 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         
         try:
-            # Determine last learner utterance from history (fallback to empty)
-            learner_utterance = ""
-            try:
-                for msg in reversed(state.user_session.dialogue_history or []):
-                    if type(msg).__name__ == "ModelRequest":
-                        for part in getattr(msg, "parts", []):
-                            if type(part).__name__ == "UserPromptPart" and part.content and part.content.strip():
-                                learner_utterance = part.content
-                                raise StopIteration
-            except StopIteration:
-                pass
-
+            # Use transcript from GraphState (constructed once at workflow start)
+            transcript = state.transcript
+            
             # Call referee agent; on failure, fall back to permissive decision
             known_words = state.user_session.known_words or []
             new_words = state.last_words
             try:
                 state.last_referee_decision = await referee_utterance(
-                    learner_utterance=learner_utterance,
+                    transcript=transcript,
                     known_words=known_words,
                     new_words=new_words,
+                    feedback=state.last_feedback,
+                    plan=state.last_plan,
                 )
             except Exception as agent_err:
                 logger.warning(f"referee_agent failed, using fallback: {agent_err}")

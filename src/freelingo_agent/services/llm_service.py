@@ -16,7 +16,11 @@ from freelingo_agent.agents.planner_agent import planner_agent
 from freelingo_agent.agents.referee_agent import referee_agent
 from pydantic_ai.messages import ModelMessage, UserPromptPart, ModelResponse, TextPart
 
-async def suggest_new_words(known_words: List[Word]) -> WordSuggestion:
+async def suggest_new_words(
+    known_words: List[Word],
+    plan: Optional[PlannerAgentOutput] = None,
+    feedback: Optional[FeedbackAgentOutput] = None,
+) -> WordSuggestion:
     """
     Calls the words_agent to suggest 3 new words that pair well with known words.
 
@@ -28,9 +32,25 @@ async def suggest_new_words(known_words: List[Word]) -> WordSuggestion:
     """
 
     try:
-        result = await words_agent.run(
-            # Extract just the word strings for the agentn            word_strings = [word.word for word in known_words]n            user_prompt = f"List of known words: {word_strings}"
-        )
+        # Build INPUT block with complete plan and feedback outputs
+        word_strings = [word.word for word in known_words]
+        parts: List[str] = []
+        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
+        if plan is not None:
+            # Pass complete plan output
+            plan_json = json.dumps(plan.model_dump(), indent=2, ensure_ascii=False)
+            parts.append("Plan:")
+            parts.append(plan_json)
+        if feedback is not None:
+            # Pass complete feedback output as fallback/context
+            feedback_json = json.dumps(feedback.model_dump(), indent=2, ensure_ascii=False)
+            parts.append("Feedback:")
+            parts.append(feedback_json)
+        parts.append("END")
+        user_prompt = "\n".join(parts)
+        print(f"[DEBUG] NEW WORDS AGENT INPUT:\n{user_prompt}")
+
+        result = await words_agent.run(user_prompt=user_prompt)
         parsed_output = json.loads(result.output)
         print(parsed_output)
         
@@ -136,8 +156,10 @@ async def get_feedback(
         parts.append(transcript_text)
         parts.append("END")
         user_prompt = "\n".join(parts)
+        print(f"[DEBUG] FEEDBACK AGENT INPUT:\n{user_prompt}")
 
         result = await feedback_agent.run(user_prompt=user_prompt)
+        print(f"[DEBUG] Raw feedback agent output: {result.output}")
         parsed_output = json.loads(result.output)
         return FeedbackAgentOutput(**parsed_output)
     except Exception as e:
@@ -146,8 +168,8 @@ async def get_feedback(
 
 async def get_plan(
     known_words: List[Word],
+    feedback: Optional[FeedbackAgentOutput] = None,
     new_words: Optional[WordSuggestion] = None,
-    transcript: Optional[Transcript] = None,
 ) -> PlannerAgentOutput:
     """
     Calls the planner_agent to create a practice plan for the next session.
@@ -155,19 +177,23 @@ async def get_plan(
     """
 
     try:
-        # Build INPUT block as per few-shots
-        parts = []
-        # Extract just the word strings for the agentn        word_strings = [word.word for word in known_words]n        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
+        # Build INPUT block with complete feedback output
+        parts: List[str] = []
+        word_strings = [word.word for word in known_words]
+        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
         if new_words and new_words.new_words:
             parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
-        if transcript and transcript.transcript:
-            # Add rich transcript context with full metadata
-            transcript_json = json.dumps(transcript.model_dump(), indent=2, ensure_ascii=False)
-            parts.append(f"transcript: {transcript_json}")
+        if feedback is not None:
+            # Pass complete feedback output
+            feedback_json = json.dumps(feedback.model_dump(), indent=2, ensure_ascii=False)
+            parts.append("Feedback:")
+            parts.append(feedback_json)
         parts.append("END")
         user_prompt = "\n".join(parts)
+        print(f"[DEBUG] PLANNER AGENT INPUT:\n{user_prompt}")
 
         result = await planner_agent.run(user_prompt=user_prompt)
+        print(f"[DEBUG] Raw planner agent output: {result.output}")
         parsed_output = json.loads(result.output)
         return PlannerAgentOutput(**parsed_output)
     except Exception as e:
@@ -175,9 +201,11 @@ async def get_plan(
 
 
 async def referee_utterance(
-    learner_utterance: str,
+    transcript: Dict[str, Any],
     known_words: List[Word],
     new_words: Optional[WordSuggestion] = None,
+    feedback: Optional[FeedbackAgentOutput] = None,
+    plan: Optional[PlannerAgentOutput] = None,
 ) -> RefereeAgentOutput:
     """
     Calls the referee_agent to evaluate a learner utterance against session rules.
@@ -185,17 +213,39 @@ async def referee_utterance(
     """
 
     try:
-        # Build INPUT block as per few-shots
-        parts = []
-        # Extract just the word strings for the agentn        word_strings = [word.word for word in known_words]n        parts.append(f"known_words: {json.dumps(word_strings, ensure_ascii=False)}")
+        # Build allowed vocabulary list
+        allowed_words = [word.word for word in known_words]
         if new_words and new_words.new_words:
-            parts.append(f"new_words: {json.dumps(new_words.new_words, ensure_ascii=False)}")
-        parts.append(f"Learner utterance: \"{learner_utterance}\"")
-        parts.append("Rules: one sentence, max 8 words, allowed vocab only.")
+            allowed_words.extend(new_words.new_words)
+        
+        # Build INPUT block with full transcript
+        parts = []
+        parts.append("Transcript:")
+        # Convert transcript to dict if it's a Pydantic model
+        if hasattr(transcript, 'model_dump'):
+            transcript_dict = transcript.model_dump()
+        else:
+            transcript_dict = transcript
+        parts.append(json.dumps(transcript_dict, indent=2, ensure_ascii=False))
+        parts.append(f"Allowed words: {json.dumps(allowed_words, ensure_ascii=False)}")
+        parts.append("Session rules: one sentence, max 8 words, no English translations or corrections.")
+        
+        # Add complete chain context for validation
+        if feedback is not None:
+            feedback_json = json.dumps(feedback.model_dump(), indent=2, ensure_ascii=False)
+            parts.append("Feedback:")
+            parts.append(feedback_json)
+        if plan is not None:
+            plan_json = json.dumps(plan.model_dump(), indent=2, ensure_ascii=False)
+            parts.append("Plan:")
+            parts.append(plan_json)
+        
         parts.append("END")
         user_prompt = "\n".join(parts)
+        print(f"[DEBUG] REFEREE AGENT INPUT:\n{user_prompt}")
 
         result = await referee_agent.run(user_prompt=user_prompt)
+        print(f"[DEBUG] Raw referee agent output: {result.output}")
         parsed_output = json.loads(result.output)
         return RefereeAgentOutput(**parsed_output)
     except Exception as e:

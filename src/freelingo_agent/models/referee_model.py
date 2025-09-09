@@ -2,16 +2,16 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
-class RuleChecks(BaseModel):
-    used_only_allowed_vocabulary: bool
-    one_sentence: bool
-    max_eight_words: bool
-    no_corrections_or_translations: bool
+class ChainChecks(BaseModel):
+    feedback_transcript_alignment: bool
+    planner_feedback_incorporation: bool
+    new_words_plan_alignment: bool
+    overall_chain_coherence: bool
 
 
 class Rationale(BaseModel):
     reasoning_summary: str
-    rule_checks: RuleChecks
+    chain_checks: ChainChecks
 
 
 class RefereeAgentOutput(BaseModel):

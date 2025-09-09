@@ -6,6 +6,7 @@ from freelingo_agent.models.words_model import Word
 
 class UserSession(BaseModel):
     user_id: str
+    session_id: Optional[str] = None
     known_words: List[Word] = Field(default_factory=list)
     new_words: List[str] = Field(default_factory=list)  # Add new_words field
     dialogue_agent: Optional[Any] = None  # Using Any to avoid type annotation issues
