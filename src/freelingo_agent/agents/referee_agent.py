@@ -12,6 +12,6 @@ referee_agent = Agent(
     model=REFEREE_LLM_MODEL,
     system_prompt=REFEREE_AGENT_PROMPT,
     temperature=0.2,
-    output_type=str,
+    output_type=RefereeAgentOutput,
     instrument=True,
 )

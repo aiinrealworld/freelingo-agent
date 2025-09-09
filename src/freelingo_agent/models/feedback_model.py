@@ -19,6 +19,6 @@ class FeedbackAgentOutput(BaseModel):
     strengths: List[str]
     issues: List[FeedbackIssue]
     next_focus_areas: List[str]
-    vocab_usage: Dict[str, VocabExample]
+    vocab_usage: Dict[str, VocabExample] = Field(default_factory=dict)
 
 

@@ -388,16 +388,18 @@ JSON SCHEMA
 }
 
 INPUT FORMAT YOU RECEIVE
-- A short transcript with alternating turns, labeled as AI: and Student:.
-- Optionally, a list of target words (known_words and/or new_words) for this session.
+- known_words: List of words the learner already knows (use this to assess vocabulary usage)
+- new_words: Previously suggested vocabulary (optional)
+- Transcript: A short transcript with alternating turns, labeled as AI: and Student:.
 
 DECISION RULES
-- If no issues are found, return issues: [] and still provide strengths and next_focus_areas.
-- Trim quotes in evidence to the minimum span that shows the error.
-- Never exceed maxItems.
-- Keep all strings short and precise (one sentence where possible).
-- For vocab_usage: include up to 3 meaningful words that were attempted or should be reinforced; prefer session targets when provided.
-- Always include at least one forward-looking focus area that promotes longer, more engaging conversation (e.g., “Practice asking follow-up questions”, “Try adding time/place details”, “Use new words to extend your answer”).
+- Assess vocabulary usage against the known_words list to identify strengths and areas for improvement
+- If no issues are found, return issues: [] and still provide strengths and next_focus_areas
+- Trim quotes in evidence to the minimum span that shows the error
+- Never exceed maxItems
+- Keep all strings short and precise (one sentence where possible)
+- For vocab_usage: include up to 3 meaningful words that were attempted or should be reinforced; prefer words from known_words or new_words when provided
+- Always include at least one forward-looking focus area that promotes longer, more engaging conversation (e.g., "Practice asking follow-up questions", "Try adding time/place details", "Use new words to extend your answer")
 
 RESPONSE FORMAT
 - JSON only. No extra text.
@@ -555,7 +557,7 @@ JSON SCHEMA
 {
   "title": "PlannerAgentOutput",
   "type": "object",
-  "required": ["session_objectives", "suggested_new_words", "practice_strategies", "conversation_prompts"],
+  "required": ["session_objectives", "practice_strategies"],
   "properties": {
     "session_objectives": {
       "type": "array",
@@ -563,37 +565,30 @@ JSON SCHEMA
       "maxItems": 3,
       "description": "High-level goals for the next session, phrased as short action-oriented statements."
     },
-    "suggested_new_words": {
-      "type": "array",
-      "items": { "type": "string" },
-      "maxItems": 5,
-      "description": "Candidate new vocabulary words aligned with learner level and goals."
-    },
     "practice_strategies": {
       "type": "array",
       "items": { "type": "string" },
       "maxItems": 3,
       "description": "Concrete strategies to reinforce known words, integrate new words, and grow conversational ability."
     },
-    "conversation_prompts": {
-      "type": "array",
-      "items": { "type": "string" },
-      "maxItems": 3,
-      "description": "Short, natural conversation starters for the AI to use that blend known and new words."
-    }
   }
 }
 
 INPUT FORMAT YOU RECEIVE
-- Learner profile with known_words, new_words (optional), and recent dialogue history.
-- Overall learning goals if provided.
+- Known words: List of words the learner already knows
+- New words: Previously suggested vocabulary (optional)
+- Feedback: Complete feedback analysis with:
+  * strengths: What the learner did well
+  * issues: Specific problems with evidence and priority
+  * next_focus_areas: Recommended practice areas
+  * vocab_usage: Example usages for target words
 
 DECISION RULES
-- Objectives must reflect both immediate issues and long-term growth (accuracy + fluency).
-- Suggested new words should be thematically related and level-appropriate.
-- Practice strategies must reinforce conversational flow, not just drills.
-- Conversation prompts must avoid one-word answers and encourage extended dialogue.
-- Always include at least one strategy or prompt that explicitly promotes conversation growth.
+- Create session_objectives that directly address the issues identified in feedback
+- Use the next_focus_areas to guide your practice_strategies
+- Objectives must reflect both immediate issues and long-term growth (accuracy + fluency)
+- Practice strategies must reinforce conversational flow, not just drills
+- Always include at least one strategy that explicitly promotes conversation growth
 
 RESPONSE FORMAT
 - JSON only. No extra text.
@@ -604,54 +599,101 @@ EXAMPLE 1
 INPUT
 known_words: ["bonjour","ça va","j'aime","le","la","un","une","je","tu","très","bien","merci","et","mais","parce que"]
 new_words: ["voyager","souvent","seulement"]
-Recent dialogue shows strong greetings but errors with prepositions and limited sentence length.
+Feedback:
+{
+  "strengths": [
+    "Used appropriate greeting response",
+    "Expressed preference with a reason using 'parce que'"
+  ],
+  "issues": [
+    {
+      "kind": "grammar",
+      "evidence": "je voyage seulement a paris",
+      "fix_hint_fr": "Utilise la préposition correcte : \"à Paris\" (accent sur \"à\").",
+      "fix_hint_en": "Use the correct preposition and accent: \"à Paris\".",
+      "priority": 1
+    }
+  ],
+  "next_focus_areas": [
+    "Practise city/place prepositions (à, en, au, aux).",
+    "Polish sentence starts and punctuation in greetings.",
+    "Extend answers with one extra detail (quand, avec qui)."
+  ],
+  "vocab_usage": {
+    "voyager": {
+      "fr": "Le week-end, j'aime voyager avec ma famille.",
+      "en": "On weekends, I like to travel with my family."
+    }
+  }
+}
 END
 
 OUTPUT
 {
   "session_objectives": [
-    "Practice prepositions with cities and countries.",
+    "Practice prepositions with cities and countries (addressing grammar issue).",
     "Encourage longer answers by adding details about time and people.",
     "Integrate new adverbs into sentences naturally."
   ],
-  "suggested_new_words": ["à", "en", "toujours"],
   "practice_strategies": [
+    "Model sentences with prepositions and have learner adapt them.",
     "Ask follow-up questions to push beyond yes/no answers.",
-    "Encourage reusing new adverbs in at least two different contexts.",
-    "Model sentences with prepositions and have learner adapt them."
+    "Encourage reusing new adverbs in at least two different contexts."
   ],
-  "conversation_prompts": [
-    "Où voyages-tu en été ?",
-    "Avec qui aimes-tu voyager ?",
-    "Voyages-tu souvent ou rarement ?"
-  ]
 }
 
 EXAMPLE 2
 INPUT
 known_words: ["manger","boire","je veux","le","la","du","de","un","une"]
 new_words: ["petit-déjeuner","d'habitude","ensuite"]
-Recent dialogue shows missing articles with food and limited variety in meal vocabulary.
+Feedback:
+{
+  "strengths": [
+    "Communicated a clear routine.",
+    "Used sequence word 'ensuite' to connect ideas."
+  ],
+  "issues": [
+    {
+      "kind": "grammar",
+      "evidence": "je mange croissant",
+      "fix_hint_fr": "Ajoute l'article défini ou indéfini : \"Je mange un croissant.\"",
+      "fix_hint_en": "Add the correct article: \"I eat a croissant.\"",
+      "priority": 1
+    },
+    {
+      "kind": "word_choice",
+      "evidence": "je bois café",
+      "fix_hint_fr": "Utilise l'article : \"Je bois du café.\"",
+      "fix_hint_en": "Use the partitive article: \"I drink some coffee.\"",
+      "priority": 2
+    }
+  ],
+  "next_focus_areas": [
+    "Articles with food (un/une/du/de la/des).",
+    "Natural verbs for meals (prendre le petit-déjeuner).",
+    "Build longer sentences with time words (d'habitude, ensuite)."
+  ],
+  "vocab_usage": {
+    "petit-déjeuner": {
+      "fr": "Je prends le petit-déjeuner à huit heures.",
+      "en": "I have breakfast at eight o'clock."
+    }
+  }
+}
 END
 
 OUTPUT
 {
   "session_objectives": [
-    "Reinforce use of articles with food items.",
+    "Reinforce use of articles with food items (addressing grammar issues).",
     "Introduce common meal phrases and sequencing words.",
     "Encourage asking and answering full questions about routines."
   ],
-  "suggested_new_words": ["déjeuner","dîner","toujours","parfois"],
   "practice_strategies": [
     "Use meal-related dialogues to highlight articles and verb choice.",
     "Prompt the learner to describe morning routines with connectors.",
     "Encourage adding time words to expand answers."
   ],
-  "conversation_prompts": [
-    "Qu'est-ce que tu prends au petit-déjeuner d'habitude ?",
-    "Que manges-tu ensuite pour le déjeuner ?",
-    "Tu bois du café ou du thé le matin ?"
-  ]
 }
 
 FINAL INSTRUCTIONS
@@ -762,9 +804,7 @@ Feedback:
 Plan:
 {
   "session_objectives": ["Practice greeting exchanges"],
-  "suggested_new_words": ["salut"],
-  "practice_strategies": ["Model greeting dialogues"],
-  "conversation_prompts": ["Comment ça va ?"]
+  "practice_strategies": ["Model greeting dialogues"]
 }
 New Words:
 {
@@ -809,9 +849,7 @@ Feedback:
 Plan:
 {
   "session_objectives": ["Practice greeting exchanges"],
-  "suggested_new_words": ["salut"],
-  "practice_strategies": ["Model greeting dialogues"],
-  "conversation_prompts": ["Comment ça va ?"]
+  "practice_strategies": ["Model greeting dialogues"]
 }
 New Words:
 {
@@ -856,9 +894,7 @@ Feedback:
 Plan:
 {
   "session_objectives": ["Expand food vocabulary and descriptions"],
-  "suggested_new_words": ["délicieux", "rouge"],
-  "practice_strategies": ["Model descriptive food sentences"],
-  "conversation_prompts": ["Comment est votre pomme ?"]
+  "practice_strategies": ["Model descriptive food sentences"]
 }
 New Words:
 {

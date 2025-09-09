@@ -12,7 +12,7 @@ feedback_agent = Agent(
     model=FEEDBACK_LLM_MODEL,
     system_prompt=FEEDBACK_AGENT_PROMPT,
     temperature=0.2,
-    output_type=str,
+    output_type=FeedbackAgentOutput,
     instrument=True,
 )
 
