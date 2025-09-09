@@ -12,6 +12,6 @@ planner_agent = Agent(
     model=PLANNER_LLM_MODEL,
     system_prompt=PLANNER_AGENT_PROMPT,
     temperature=0.2,
-    output_type=str,
+    output_type=PlannerAgentOutput,
     instrument=True,
 )

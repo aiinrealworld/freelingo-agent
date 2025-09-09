@@ -295,21 +295,20 @@ async def get_plan(
 
         result = await planner_agent.run(user_prompt=user_prompt)
         log_agent_output_pretty("PLANNER AGENT", result.output)
-        parsed_output = json.loads(result.output)
-        return PlannerAgentOutput(**parsed_output)
+        return result.output
     except Exception as e:
         raise RuntimeError(f"planner_agent failed: {e}")
 
 
-async def referee_utterance(
-    transcript: Dict[str, Any],
+async def validate_agent_chain(
+    transcript: Transcript,
     known_words: List[Word],
-    new_words: Optional[WordSuggestion] = None,
     feedback: Optional[FeedbackAgentOutput] = None,
     plan: Optional[PlannerAgentOutput] = None,
+    new_words: Optional[WordSuggestion] = None,
 ) -> RefereeAgentOutput:
     """
-    Calls the referee_agent to evaluate a learner utterance against session rules.
+    Calls the referee_agent to validate the entire agent chain alignment.
     Returns a validated RefereeAgentOutput.
     """
 
@@ -322,14 +321,8 @@ async def referee_utterance(
         # Build INPUT block with full transcript
         parts = []
         parts.append("Transcript:")
-        # Convert transcript to dict if it's a Pydantic model
-        if hasattr(transcript, 'model_dump'):
-            transcript_dict = transcript.model_dump()
-        else:
-            transcript_dict = transcript
-        parts.append(json.dumps(transcript_dict, indent=2, ensure_ascii=False))
-        parts.append(f"Allowed words: {json.dumps(allowed_words, ensure_ascii=False)}")
-        parts.append("Session rules: one sentence, max 8 words, no English translations or corrections.")
+        parts.append(json.dumps(transcript.model_dump(), indent=2, ensure_ascii=False))
+        parts.append(f"Known words: {json.dumps(allowed_words, ensure_ascii=False)}")
         
         # Add complete chain context for validation
         if feedback is not None:
