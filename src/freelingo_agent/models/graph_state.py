@@ -8,7 +8,6 @@ from .planner_model import PlannerAgentOutput
 from .words_model import WordSuggestion
 from .referee_model import RefereeAgentOutput
 from .user_session import UserSession
-from .dialogue_session import DialogueSessionRequest
 from .transcript_model import Transcript
 
 
@@ -17,7 +16,6 @@ class GraphState(BaseModel):
     # User and session info (using existing models)
     user_id: str
     user_session: UserSession  # Your existing UserSession
-    dialogue_session: Optional[DialogueSessionRequest] = None
     
     # Current workflow state
     current_agent: Literal["FEEDBACK", "PLANNER", "NEW_WORDS", "REFEREE"] = "FEEDBACK"
