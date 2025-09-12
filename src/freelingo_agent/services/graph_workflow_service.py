@@ -96,9 +96,6 @@ class GraphWorkflowService:
                 )
             except Exception as agent_err:
                 logger.error(f"feedback_agent failed, using fallback: {agent_err}")
-                print(f"[ERROR] Feedback agent failed: {agent_err}")
-                import traceback
-                traceback.print_exc()
                 state.last_feedback = FeedbackAgentOutput(
                     strengths=[f"Completed session with {len(state.user_session.dialogue_history)} exchanges"],
                     issues=[],
@@ -144,14 +141,14 @@ class GraphWorkflowService:
                 logger.warning(f"planner_agent failed, using fallback: {agent_err}")
                 state.last_plan = PlannerAgentOutput(
                     session_objectives=["Expand vocabulary", "Practice conversation"],
-                    practice_strategies=["Daily conversation practice"],
+                    vocab_gaps=["Common conversation starters"],
                 )
             
         except Exception as e:
             logger.error(f"Error in planner node: {e}")
             state.last_plan = PlannerAgentOutput(
                 session_objectives=["Continue learning"],
-                practice_strategies=["Regular practice"]
+                vocab_gaps=["Basic conversation skills"]
             )
         
         return state
@@ -204,9 +201,8 @@ class GraphWorkflowService:
         state.updated_at = datetime.now()
         state.state_transitions.append("REFEREE")
         
-        # Print state transitions when reaching referee
+        # Log state transitions when reaching referee
         transitions_str = " → ".join(state.state_transitions)
-        print(f"[REFEREE] State transitions: {transitions_str}")
         logger.info(f"State transitions when reaching referee: {transitions_str}")
         
         try:
@@ -326,9 +322,62 @@ class GraphWorkflowService:
         else:
             logger.info("No state transitions recorded yet")
     
+    def _log_workflow_completion(self, final_state: GraphState) -> None:
+        """Log workflow completion with GraphState summary"""
+        print(f"\n🔄 GRAPH WORKFLOW COMPLETED")
+        print(f"   User ID: {final_state.user_id}")
+        print(f"   Final Agent: {final_state.current_agent}")
+        print(f"   Total Transitions: {len(final_state.state_transitions)}")
+        if final_state.state_transitions:
+            transitions_str = " → ".join(final_state.state_transitions)
+            print(f"   Transition Path: {transitions_str}")
+        
+        # Log agent outputs
+        if final_state.last_feedback:
+            print(f"   📝 Feedback Generated:")
+            if final_state.last_feedback.strengths:
+                print(f"     - Strengths: {len(final_state.last_feedback.strengths)} items")
+            if final_state.last_feedback.mistakes:
+                print(f"     - Mistakes: {len(final_state.last_feedback.mistakes)} items")
+            if final_state.last_feedback.conversation_examples:
+                print(f"     - Examples: {len(final_state.last_feedback.conversation_examples)} items")
+        
+        if final_state.last_plan:
+            print(f"   📋 Learning Plan Generated:")
+            if final_state.last_plan.session_objectives:
+                print(f"     - Objectives: {len(final_state.last_plan.session_objectives)} items")
+            if final_state.last_plan.vocab_gaps:
+                print(f"     - Vocab Gaps: {len(final_state.last_plan.vocab_gaps)} items")
+        
+        if final_state.last_words:
+            print(f"   🆕 New Words Suggested:")
+            print(f"     - Words: {len(final_state.last_words.new_words)} items")
+            if final_state.last_words.usages:
+                print(f"     - Usage Examples: {len(final_state.last_words.usages)} items")
+        
+        if final_state.last_referee_decision:
+            print(f"   ⚖️ Referee Decision:")
+            print(f"     - Valid: {final_state.last_referee_decision.is_valid}")
+            if final_state.last_referee_decision.violations:
+                print(f"     - Violations: {', '.join(final_state.last_referee_decision.violations)}")
+        
+        # Log retry information
+        if final_state.agent_retry_count:
+            total_retries = sum(final_state.agent_retry_count.values())
+            print(f"   🔄 Retry Summary: {total_retries} total retries across {len(final_state.agent_retry_count)} agents")
+        
+        print(f"   ✅ Workflow completed successfully\n")
+    
     async def trigger_feedback_loop(self, state: GraphState) -> GraphState:
         """Trigger the post-session learning workflow: feedback → planner → words → referee"""
         logger.info(f"Triggering feedback loop for user {state.user_id}")
+        
+        # Log workflow start
+        print(f"\n🚀 GRAPH WORKFLOW STARTING")
+        print(f"   User ID: {state.user_id}")
+        print(f"   Transcript turns: {len(state.transcript.transcript) if state.transcript and state.transcript.transcript else 0}")
+        print(f"   Known words: {len(state.user_session.known_words) if state.user_session.known_words else 0}")
+        print(f"   Starting agent: FEEDBACK")
         
         # Transition to feedback flow
         state.current_agent = "FEEDBACK"
@@ -368,6 +417,10 @@ class GraphWorkflowService:
             
             # Log final state transitions
             self._log_state_transitions(final_state)
+            
+            # Log workflow completion with GraphState summary
+            self._log_workflow_completion(final_state)
+            
             return final_state
         except Exception as e:
             logger.error(f"Error running workflow: {e}")

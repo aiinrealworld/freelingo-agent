@@ -841,7 +841,7 @@ Feedback:
 Plan:
 {
   "session_objectives": ["Practice greeting exchanges"],
-  "practice_strategies": ["Model greeting dialogues"]
+  "vocab_gaps": ["Words for greeting exchanges"]
 }
 New Words:
 {
@@ -886,7 +886,7 @@ Feedback:
 Plan:
 {
   "session_objectives": ["Practice greeting exchanges"],
-  "practice_strategies": ["Model greeting dialogues"]
+  "vocab_gaps": ["Words for greeting exchanges"]
 }
 New Words:
 {
@@ -931,7 +931,7 @@ Feedback:
 Plan:
 {
   "session_objectives": ["Expand food vocabulary and descriptions"],
-  "practice_strategies": ["Model descriptive food sentences"]
+  "vocab_gaps": ["Words for describing food"]
 }
 New Words:
 {
